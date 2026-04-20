@@ -32,6 +32,16 @@ if [ ! -d ".git" ]; then
     echo "Git repository initialized"
 fi
 
+# Ensure git user identity is configured
+if [ -z "$(git config user.name)" ]; then
+    git config user.name "Devin Backup"
+    git config user.email "devin@backup.local"
+    echo "Git user identity configured"
+fi
+
+# Get current branch (needed for summary regardless of remote status)
+CURRENT_BRANCH=$(git branch --show-current || echo "main")
+
 # Check if remote is configured
 if ! git remote get-url origin &> /dev/null; then
     echo "Warning: No remote configured. Please add a remote with:"
@@ -45,9 +55,13 @@ else
     echo "Remote configured: $REMOTE_URL"
 fi
 
-# Check for changes
+# Stage all changes first
+echo "Staging changes..."
+git add .
+
+# Check for changes after staging (more accurate)
 echo "Checking for changes..."
-if git diff --quiet && git diff --cached --quiet; then
+if git diff --cached --quiet; then
     echo "No changes detected. Vault is already up to date."
     exit 0
 fi
@@ -55,24 +69,23 @@ fi
 # Show what will be committed
 echo ""
 echo "Changes to be committed:"
-git status --short
-
-# Stage all changes
-echo ""
-echo "Staging changes..."
-git add .
+git diff --cached --stat
 
 # Create commit
+echo ""
 echo "Creating commit..."
-git commit -m "$COMMIT_MESSAGE"
-COMMIT_HASH=$(git rev-parse --short HEAD)
-echo "Commit created: $COMMIT_HASH"
+if git commit -m "$COMMIT_MESSAGE"; then
+    COMMIT_HASH=$(git rev-parse --short HEAD)
+    echo "Commit created: $COMMIT_HASH"
+else
+    echo "Error: Failed to create commit"
+    exit 1
+fi
 
 # Push to remote if configured
 if [ "$HAS_REMOTE" = true ]; then
     echo ""
     echo "Pushing to remote..."
-    CURRENT_BRANCH=$(git branch --show-current)
     echo "Current branch: $CURRENT_BRANCH"
 
     # Attempt to push
