@@ -5,9 +5,9 @@
 
 set -e  # Exit on error
 
-# Source the shared configuration
+# Source the skill-specific configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../config.sh"
+source "$SCRIPT_DIR/config.sh"
 
 VAULT_PATH="$OBSIDIAN_VAULT_PATH"
 COMMIT_MESSAGE="${1:-$BACKUP_COMMIT_PREFIX: $(date '+%Y-%m-%d %H:%M:%S')}"

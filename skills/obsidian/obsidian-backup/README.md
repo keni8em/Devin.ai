@@ -51,17 +51,15 @@ No additional installation is required - it's part of your Devin configuration.
 
 #### Default Vault Path
 
-The backup script uses the vault path from the centralized configuration:
+The backup script uses the vault path from its configuration file:
 ```
 /mnt/c/Users/moorek8/OneDrive - Dell Technologies/Code-Repo/Obsidian
 ```
 
-To change this, edit the `OBSIDIAN_VAULT_PATH` variable in the shared configuration file:
+To change this, edit the `OBSIDIAN_VAULT_PATH` variable in the skill's configuration file:
 ```bash
-/home/moorek8/.config/devin/skills/obsidian/config.sh
+/home/moorek8/.config/devin/skills/obsidian/obsidian-backup/config.sh
 ```
-
-See `../CONFIG.md` for detailed configuration documentation.
 
 #### GitHub Remote Setup
 
@@ -218,6 +216,7 @@ obsidian/
 └── obsidian-backup/
     ├── SKILL.md          # Skill configuration and execution instructions
     ├── backup.sh         # Main backup script that handles git operations
+    ├── config.sh         # Skill-specific configuration
     └── README.md         # This documentation file
 ```
 
@@ -238,6 +237,12 @@ obsidian/
   - Creates commits with custom or timestamp messages
   - Pushes to GitHub remote if configured
   - Provides detailed progress feedback and error handling
+
+- **config.sh**: Skill-specific configuration file:
+  - Vault path and GitHub repository settings
+  - Git user identity configuration
+  - Backup preferences and commit message formats
+  - File exclusion patterns
 
 - **README.md**: Comprehensive documentation covering:
   - Quick start guide for immediate usage

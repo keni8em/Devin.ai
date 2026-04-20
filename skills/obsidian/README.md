@@ -38,13 +38,13 @@ Create daily journal entries in your Obsidian vault.
 ```
 obsidian/
 ├── README.md              # This file - overview of Obsidian skills
-├── CONFIG.md              # Configuration file documentation
-├── config.sh              # Shared configuration variables
 ├── daily-journal/          # Daily journal automation skill
-│   └── SKILL.md          # Skill configuration
+│   ├── SKILL.md          # Skill configuration
+│   └── config.sh         # Journal-specific configuration
 └── obsidian-backup/       # Vault backup skill
     ├── SKILL.md          # Skill configuration
     ├── backup.sh         # Backup script
+    ├── config.sh         # Backup-specific configuration
     └── README.md         # Skill documentation
 ```
 
@@ -68,34 +68,29 @@ skill daily-journal
 
 ## Configuration
 
-Obsidian skills use a centralized configuration system to manage shared settings across all skills.
+Each Obsidian skill has its own configuration file for simplicity and independence.
 
-### Configuration File
+### Skill-Specific Configuration
 
-The `config.sh` file contains shared variables used by all Obsidian skills:
-
-- **Vault path**: Centralized Obsidian vault location
-- **GitHub repository**: Repository URL for backup operations
-- **Git settings**: Default user identity for commits
-- **Journal settings**: Daily journal configuration
-- **Backup preferences**: Commit message formats and exclusions
+- **obsidian-backup**: Uses `obsidian-backup/config.sh`
+  - Vault path, GitHub settings, backup preferences
+- **daily-journal**: Uses `daily-journal/config.sh`
+  - Vault path, journal folder, date/time formats
 
 ### Benefits
 
-- **Single source of truth**: Update settings in one place
-- **Consistency**: All skills use the same configuration
-- **Maintainability**: Easy to update paths and settings
-- **Flexibility**: Simple to customize for different environments
+- **Independence**: Each skill is self-contained
+- **Simplicity**: Easy to understand and modify
+- **Isolation**: Changes to one skill don't affect others
+- **Clarity**: Configuration is close to the code that uses it
 
 ### Customization
 
-To modify configuration:
+To modify a skill's configuration:
 
-1. Edit `config.sh` in the obsidian folder
+1. Edit the `config.sh` file in the skill's directory
 2. Change the desired variable values
-3. All skills automatically use the updated configuration
-
-See `CONFIG.md` for detailed configuration documentation.
+3. The skill automatically uses the updated configuration
 
 ## Purpose
 
