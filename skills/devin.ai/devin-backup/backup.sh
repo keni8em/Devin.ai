@@ -1,21 +1,25 @@
 #!/bin/bash
 
-# Devin AI Configuration Backup Script
+# Devin Config Backup Script
 # Syncs ~/.config/devin/ with GitHub repository
 
 set -e  # Exit on error
 
-VAULT_PATH="/home/moorek8/.config/devin"
-COMMIT_MESSAGE="${1:-Devin AI configuration backup: $(date '+%Y-%m-%d %H:%M:%S')}"
+# Source the skill-specific configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.sh"
 
-echo "=== Devin AI Configuration Backup Script ==="
-echo "Config path: $VAULT_PATH"
+CONFIG_PATH="$DEVIN_CONFIG_PATH"
+COMMIT_MESSAGE="${1:-$BACKUP_COMMIT_PREFIX: $(date '+%Y-%m-%d %H:%M:%S')}"
+
+echo "=== Devin Config Backup Script ==="
+echo "Config path: $CONFIG_PATH"
 echo "Commit message: $COMMIT_MESSAGE"
 echo ""
 
 # Navigate to config directory
-cd "$VAULT_PATH" || {
-    echo "Error: Cannot navigate to config directory: $VAULT_PATH"
+cd "$CONFIG_PATH" || {
+    echo "Error: Cannot navigate to config directory: $CONFIG_PATH"
     exit 1
 }
 
@@ -34,8 +38,8 @@ fi
 
 # Ensure git user identity is configured
 if [ -z "$(git config user.name)" ]; then
-    git config user.name "Devin Backup"
-    git config user.email "devin@backup.local"
+    git config user.name "$GIT_USER_NAME"
+    git config user.email "$GIT_USER_EMAIL"
     echo "Git user identity configured"
 fi
 
@@ -98,7 +102,7 @@ if [ "$HAS_REMOTE" = true ]; then
         echo "  - Remote repository not accessible"
         echo ""
         echo "Changes are committed locally. Please push manually when ready:"
-        echo "  cd \"$VAULT_PATH\""
+        echo "  cd \"$CONFIG_PATH\""
         echo "  git push origin $CURRENT_BRANCH"
         exit 1
     fi

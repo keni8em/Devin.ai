@@ -1,6 +1,6 @@
-# Devin AI Configuration Backup Skill
+# Devin Configuration Backup Skill
 
-Automatically sync your Devin AI configuration with a GitHub repository.
+Automatically sync your Devin configuration with a GitHub repository.
 
 ## Quick Start
 
@@ -8,12 +8,12 @@ Get started immediately with these simple commands:
 
 **Default backup with timestamp:**
 ```bash
-skill devin-ai-backup
+skill devin-backup
 ```
 
 **Custom commit message:**
 ```bash
-skill devin-ai-backup "Updated skills configuration"
+skill devin-backup "Updated skills configuration"
 ```
 
 ## Why Use This Skill?
@@ -27,7 +27,32 @@ skill devin-ai-backup "Updated skills configuration"
 
 ## Overview
 
-This skill provides a simple way to backup your Devin AI configuration to GitHub without needing to manually run git commands. It handles all the git operations automatically: checking for changes, staging files, creating commits, and pushing to your remote repository.
+This skill provides a simple way to backup your Devin configuration to GitHub without needing to manually run git commands. It uses a layered architecture to avoid approval prompts while maintaining intelligent decision-making.
+
+## Architecture
+
+The skill uses a **layered approach** to solve the approval prompt problem:
+
+- **SKILL.md Layer**: Intelligent interface that:
+  - Understands user intent and natural language requests
+  - Prepares parameters (commit messages, context)
+  - Makes decisions about when to execute backup
+  - Executes the script with appropriate parameters
+
+- **backup.sh Layer**: Technical execution that:
+  - Handles all git operations (add, commit, push)
+  - Performs change detection (answers "is backup needed?")
+  - Manages file system operations
+  - Provides progress feedback and error handling
+  - **Never asks for approval** - all operations batched together
+
+- **config.sh Layer**: Configuration that:
+  - Stores user-configurable settings (config path, git identity)
+  - Separates configuration from implementation
+  - Easy to customize without touching code
+
+**Why this approach?**
+When the SKILL does everything directly, you get asked to approve each git command. By batching all technical operations in the backup.sh script, you get intelligent decision-making from the SKILL but no approval prompts for the technical work.
 
 ## Requirements
 
@@ -51,12 +76,15 @@ No additional installation is required - it's part of your Devin configuration.
 
 #### Default Config Path
 
-The backup script uses this default config path:
+The backup script uses the config path from its configuration file:
 ```
 /home/moorek8/.config/devin
 ```
 
-To change this, edit the `VAULT_PATH` variable in `backup.sh`.
+To change this, edit the `DEVIN_CONFIG_PATH` variable in the skill's configuration file:
+```bash
+/home/moorek8/.config/devin/skills/devin.ai/devin-backup/config.sh
+```
 
 #### GitHub Remote Setup
 
@@ -86,35 +114,45 @@ This ensures commits can be created even if git is not configured on your system
 
 Run the skill with default timestamp commit message:
 ```
-skill devin-ai-backup
+skill devin-backup
 ```
 
 ### Custom Commit Message
 
 Run with a custom commit message:
 ```
-skill devin-ai-backup "Updated skills configuration"
+skill devin-backup "Updated skills configuration"
 ```
 
 ## How It Works
 
-The skill follows this streamlined process:
+The skill follows this streamlined process with clear separation of concerns:
 
-1. **User invokes skill**: `skill devin-ai-backup "custom message"`
-2. **SKILL.md instructions**: Directs execution of backup script
-3. **backup.sh execution**:
+1. **User invokes skill**: `skill devin-backup "custom message"`
+2. **SKILL.md (Intent Assessment & Parameter Preparation)**:
+   - Assesses user's intent and request context
+   - Reads configuration file to get config path
+   - Prepares commit message (user-provided or default timestamp)
+   - Executes backup script with appropriate parameters
+3. **backup.sh (Technical Execution)**:
    - Navigates to your ~/.config/devin/ directory
    - Checks if it's a git repository (initializes if needed)
    - Configures git user identity if not already set
    - Gets the current branch for proper tracking
    - Checks if GitHub remote is configured
-   - Stages all modified files (for accurate change detection)
-   - Checks for changes after staging (more accurate detection)
+   - Stages all modified files
+   - **Detects changes** (determines if backup is needed)
    - Shows what will be committed
    - Creates a commit with your message or a timestamp (with error handling)
-   - Pushes changes to GitHub (if remote is configured)
+   - Pushes changes to GitHub (if remote configured)
    - Displays a summary of the backup operation
 4. **Result**: Configuration is synced with GitHub without manual intervention
+
+**Key Separation of Concerns:**
+- **SKILL.md**: Understands user intent, prepares parameters, executes script
+- **backup.sh**: Handles all git operations, change detection, file system operations
+- **config.sh**: Stores user-configurable settings
+- **No approval prompts**: All technical operations batched in script execution
 
 ### Key Features
 
@@ -132,9 +170,9 @@ The skill follows this streamlined process:
 The script provides clear feedback at each step:
 
 ```
-=== Devin AI Configuration Backup Script ===
+=== Devin Config Backup Script ===
 Config path: /home/moorek8/.config/devin
-Commit message: Devin AI configuration backup: 2026-04-20 15:52:40
+Commit message: Devin config backup: 2026-04-20 15:52:40
 
 Remote configured: https://github.com/username/repo.git
 Staging changes...
@@ -146,7 +184,7 @@ Changes to be committed:
  2 files changed, 5 insertions(+), 3 deletions(-)
 
 Creating commit...
-[main abc1234] Devin AI configuration backup: 2026-04-20 15:52:40
+[main abc1234] Devin config backup: 2026-04-20 15:52:40
  2 files changed, 5 insertions(+), 3 deletions(-)
 Commit created: abc1234
 
@@ -169,7 +207,7 @@ Backup completed successfully!
 ### Custom Config Path
 
 To use a different config path, you can either:
-1. Edit the `VAULT_PATH` variable in `backup.sh`, or
+1. Edit the `DEVIN_CONFIG_PATH` variable in `config.sh`, or
 2. Create a copy of the skill with a different configuration
 
 ## Troubleshooting
@@ -213,6 +251,7 @@ devin.ai/
 └── devin-backup/
     ├── SKILL.md          # Skill configuration and execution instructions
     ├── backup.sh         # Main backup script that handles git operations
+    ├── config.sh         # Skill-specific configuration
     └── README.md         # This documentation file
 ```
 
@@ -233,6 +272,12 @@ devin.ai/
   - Creates commits with custom or timestamp messages
   - Pushes to GitHub remote if configured
   - Provides detailed progress feedback and error handling
+
+- **config.sh**: Skill-specific configuration file:
+  - Config path and GitHub repository settings
+  - Git user identity configuration
+  - Backup preferences and commit message formats
+  - File exclusion patterns
 
 - **README.md**: Comprehensive documentation covering:
   - Quick start guide for immediate usage

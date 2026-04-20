@@ -9,11 +9,11 @@ The Devin.ai CLI skills folder contains specialized skills that extend and enhan
 ## Available Skills
 
 ### devin-backup
-Automatically syncs your Devin AI configuration with a GitHub repository.
+Automatically syncs your Devin configuration with a GitHub repository.
 
-- **Purpose**: Backup and version control for Devin AI configuration
+- **Purpose**: Backup and version control for Devin configuration
 - **Location**: `devin-backup/`
-- **Usage**: `skill devin-ai-backup [commit message]`
+- **Usage**: `skill devin-backup [commit message]`
 - **Documentation**: See `devin-backup/README.md`
 
 ## Structure
@@ -24,6 +24,7 @@ devin.ai/
 └── devin-backup/          # Configuration backup skill
     ├── SKILL.md          # Skill configuration
     ├── backup.sh         # Backup script
+    ├── config.sh         # Skill-specific configuration
     └── README.md         # Skill documentation
 ```
 
@@ -38,15 +39,15 @@ skill list
 # Invoke a specific skill
 skill <skill-name> [arguments]
 
-# Example: Backup Devin AI configuration
-skill devin-ai-backup "Updated configuration"
+# Example: Backup Devin configuration
+skill devin-backup "Updated configuration"
 ```
 
 ## Purpose
 
 These skills focus on:
 
-- **Configuration Management**: Backing up and syncing Devin AI configurations
+- **Configuration Management**: Backing up and syncing Devin configurations
 - **CLI Integration**: Enhancing CLI-specific workflows
 - **System Operations**: Tasks that interact with the Devin.ai system itself
 - **Automation**: Streamlining repetitive CLI operations
@@ -68,6 +69,7 @@ To add a new Devin.ai CLI-specific skill:
 2. Add the required files:
    - `SKILL.md` - Skill configuration and instructions
    - `backup.sh` (or equivalent script) - Implementation
+   - `config.sh` - Skill-specific configuration
    - `README.md` - Documentation
 3. Follow the existing structure and naming conventions
 4. Update this README to include the new skill
