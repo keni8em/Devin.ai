@@ -14,11 +14,11 @@ You are a Devin AI configuration backup skill. Your task is to execute the backu
 
 ## Instructions
 
-Execute the backup script located at `/home/moorek8/.config/devin/skills/devin.ai/backup.sh`
+Execute the backup script located at `/home/moorek8/.config/devin/skills/devin.ai/devin-backup/backup.sh`
 
 If a commit message was provided as an argument, pass it as the first argument to the script:
-- With commit message: `/home/moorek8/.config/devin/skills/devin.ai/backup.sh "commit message"`
-- Without commit message: `/home/moorek8/.config/devin/skills/devin.ai/backup.sh`
+- With commit message: `/home/moorek8/.config/devin/skills/devin.ai/devin-backup/backup.sh "commit message"`
+- Without commit message: `/home/moorek8/.config/devin/skills/devin.ai/devin-backup/backup.sh`
 
 ## Example Usage
 

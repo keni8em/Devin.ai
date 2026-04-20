@@ -42,7 +42,7 @@ This skill provides a simple way to backup your Devin AI configuration to GitHub
 
 The skill is located in your Devin configuration:
 ```
-/home/moorek8/.config/devin/skills/devin.ai/
+/home/moorek8/.config/devin/skills/devin.ai/devin-backup/
 ```
 
 No additional installation is required - it's part of your Devin configuration.
@@ -210,9 +210,10 @@ The skill folder structure:
 
 ```
 devin.ai/
-├── SKILL.md          # Skill configuration and execution instructions
-├── backup.sh         # Main backup script that handles git operations
-└── README.md         # This documentation file
+└── devin-backup/
+    ├── SKILL.md          # Skill configuration and execution instructions
+    ├── backup.sh         # Main backup script that handles git operations
+    └── README.md         # This documentation file
 ```
 
 ### File Descriptions
@@ -240,6 +241,7 @@ devin.ai/
   - Usage examples for basic and advanced scenarios
   - Detailed operation flow
   - Troubleshooting guide for common issues
+  - Located at: /home/moorek8/.config/devin/skills/devin.ai/devin-backup/
 
 ## License
 
