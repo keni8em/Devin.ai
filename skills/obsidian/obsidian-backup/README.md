@@ -27,7 +27,32 @@ skill obsidian-backup "Updated daily notes"
 
 ## Overview
 
-This skill provides a simple way to backup your Obsidian vault to GitHub without needing to manually run git commands. It handles all the git operations automatically: checking for changes, staging files, creating commits, and pushing to your remote repository.
+This skill provides a simple way to backup your Obsidian vault to GitHub without needing to manually run git commands. It uses a layered architecture to avoid approval prompts while maintaining intelligent decision-making.
+
+## Architecture
+
+The skill uses a **layered approach** to solve the approval prompt problem:
+
+- **SKILL.md Layer**: Intelligent interface that:
+  - Understands user intent and natural language requests
+  - Prepares parameters (commit messages, context)
+  - Makes decisions about when to execute backup
+  - Executes the script with appropriate parameters
+
+- **backup.sh Layer**: Technical execution that:
+  - Handles all git operations (add, commit, push)
+  - Performs change detection (answers "is backup needed?")
+  - Manages file system operations
+  - Provides progress feedback and error handling
+  - **Never asks for approval** - all operations batched together
+
+- **config.sh Layer**: Configuration that:
+  - Stores user-configurable settings (vault path, git identity)
+  - Separates configuration from implementation
+  - Easy to customize without touching code
+
+**Why this approach?**
+When the SKILL does everything directly, you get asked to approve each git command. By batching all technical operations in the backup.sh script, you get intelligent decision-making from the SKILL but no approval prompts for the technical work.
 
 ## Requirements
 
@@ -101,23 +126,33 @@ skill obsidian-backup "Updated daily notes"
 
 ## How It Works
 
-The skill follows this streamlined process:
+The skill follows this streamlined process with clear separation of concerns:
 
 1. **User invokes skill**: `skill obsidian-backup "custom message"`
-2. **SKILL.md instructions**: Directs execution of backup script
-3. **backup.sh execution**:
+2. **SKILL.md (Intent Assessment & Parameter Preparation)**:
+   - Assesses user's intent and request context
+   - Reads configuration file to get vault path
+   - Prepares commit message (user-provided or default timestamp)
+   - Executes backup script with appropriate parameters
+3. **backup.sh (Technical Execution)**:
    - Navigates to your Obsidian vault directory
    - Checks if it's a git repository (initializes if needed)
    - Configures git user identity if not already set
    - Gets the current branch for proper tracking
    - Checks if GitHub remote is configured
-   - Stages all modified files (for accurate change detection)
-   - Checks for changes after staging (more accurate detection)
+   - Stages all modified files
+   - **Detects changes** (determines if backup is needed)
    - Shows what will be committed
    - Creates a commit with your message or a timestamp (with error handling)
-   - Pushes changes to GitHub (if remote is configured)
+   - Pushes changes to GitHub (if remote configured)
    - Displays a summary of the backup operation
 4. **Result**: Vault is synced with GitHub without manual intervention
+
+**Key Separation of Concerns:**
+- **SKILL.md**: Understands user intent, prepares parameters, executes script
+- **backup.sh**: Handles all git operations, change detection, file system operations
+- **config.sh**: Stores user-configurable settings
+- **No approval prompts**: All technical operations batched in script execution
 
 ### Key Features
 
