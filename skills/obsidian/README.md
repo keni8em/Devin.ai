@@ -15,11 +15,6 @@ Automatically sync your Obsidian vault with a GitHub repository.
 - **Location**: `obsidian-backup/`
 - **Usage**: `skill obsidian-backup [commit message]`
 - **Documentation**: See `obsidian-backup/README.md`
-- **Features**:
-  - Automatic git operations
-  - Accurate change detection
-  - Custom commit messages
-  - Error handling and authentication
 
 ### daily-journal
 Create daily journal entries in your Obsidian vault.
@@ -28,20 +23,16 @@ Create daily journal entries in your Obsidian vault.
 - **Location**: `daily-journal/`
 - **Usage**: `skill daily-journal`
 - **Documentation**: See `daily-journal/SKILL.md`
-- **Features**:
-  - Daily note creation
-  - Template support
-  - Date-based organization
 
 ## Structure
 
 ```
 obsidian/
 ├── README.md              # This file - overview of Obsidian skills
-├── daily-journal/          # Daily journal automation skill
+├── daily-journal/         # Daily journal automation skill
 │   ├── SKILL.md          # Skill configuration
 │   └── config.sh         # Journal-specific configuration
-└── obsidian-backup/       # Vault backup skill
+└── obsidian-backup/      # Vault backup skill
     ├── SKILL.md          # Skill configuration
     ├── backup.sh         # Backup script
     ├── config.sh         # Backup-specific configuration
@@ -66,9 +57,55 @@ skill obsidian-backup "Updated daily notes"
 skill daily-journal
 ```
 
+## Purpose
+
+These skills focus on:
+
+- **Vault Management**: Backup, sync, and version control for Obsidian vaults
+- **Note Automation**: Automated note creation and organization
+- **Workflow Enhancement**: Streamlining repetitive Obsidian tasks
+- **Integration**: Connecting Obsidian with external tools and services
+- **Productivity**: Reducing manual overhead in knowledge management
+
+## Difference from Other Skills
+
+Unlike general-purpose skills (like the devin-backup in the `devin.ai/` folder), skills in this directory are specifically designed for:
+
+- Obsidian vault operations
+- Note-taking and knowledge management workflows
+- Content creation and organization
+- PKM (Personal Knowledge Management) tasks
+
+## Adding New Skills
+
+To add a new Obsidian-specific skill:
+
+1. Create a new subfolder: `mkdir obsidian/your-skill-name/`
+2. Add the required files:
+   - `SKILL.md` - Skill configuration and instructions
+   - Implementation files (scripts, templates, etc.)
+   - `config.sh` - Skill-specific configuration
+   - `README.md` - Documentation
+3. Follow the existing structure and naming conventions
+4. Update this README to include the new skill
+
+## Requirements
+
+- Obsidian installed and configured
+- Appropriate vault access permissions
+- Git installed (for backup operations)
+- GitHub account (for remote backup operations)
+- Devin AI with access to the skills system
+
 ## Configuration
 
-Each Obsidian skill has its own configuration file for simplicity and independence.
+Skills in this directory may require:
+
+- Obsidian vault path configuration
+- Git repository setup (for backup operations)
+- GitHub CLI authentication (for remote backup)
+- Template files (for journal creation)
+- Plugin dependencies (depending on skill functionality)
 
 ### Skill-Specific Configuration
 
@@ -92,127 +129,6 @@ To modify a skill's configuration:
 2. Change the desired variable values
 3. The skill automatically uses the updated configuration
 
-## Purpose
-
-These skills focus on:
-
-- **Vault Management**: Backup, sync, and version control for Obsidian vaults
-- **Note Automation**: Automated note creation and organization
-- **Workflow Enhancement**: Streamlining repetitive Obsidian tasks
-- **Integration**: Connecting Obsidian with external tools and services
-- **Productivity**: Reducing manual overhead in knowledge management
-
-## Typical Use Cases
-
-### Knowledge Management
-- Automatic vault backups to prevent data loss
-- Version control for tracking note changes
-- Sync across multiple devices
-
-### Daily Workflow
-- Automated daily journal creation
-- Template-based note generation
-- Consistent note organization
-
-### Research & Writing
-- Backup research notes
-- Track changes in Zettelkasten
-- Maintain version history of important documents
-
-## Configuration
-
-Skills in this directory may require:
-
-- Obsidian vault path configuration
-- Git repository setup (for backup operations)
-- GitHub CLI authentication (for remote backup)
-- Template files (for journal creation)
-- Plugin dependencies (depending on skill functionality)
-
-## Default Vault Path
-
-Most Obsidian skills use this default vault path:
-```
-/mnt/c/Users/moorek8/OneDrive - Dell Technologies/Code-Repo/Obsidian
-```
-
-To customize this for your setup, edit the respective skill configuration files.
-
-## Adding New Skills
-
-To add a new Obsidian-specific skill:
-
-1. Create a new subfolder: `mkdir obsidian/your-skill-name/`
-2. Add the required files:
-   - `SKILL.md` - Skill configuration and instructions
-   - Implementation files (scripts, templates, etc.)
-   - `README.md` - Documentation (recommended)
-3. Follow the existing structure and naming conventions
-4. Update this README to include the new skill
-5. Test thoroughly with your Obsidian setup
-
-## Requirements
-
-- Obsidian installed and configured
-- Appropriate vault access permissions
-- Git installed (for backup operations)
-- GitHub account (for remote backup operations)
-- Devin AI with access to the skills system
-
-## Best Practices
-
-### Backup Strategy
-- Use obsidian-backup regularly, especially after significant changes
-- Consider automated scheduled backups
-- Test backup restoration process periodically
-
-### Journal Workflow
-- Use daily-journal as part of a consistent daily routine
-- Customize templates to match your workflow
-- Integrate with other productivity tools
-
-### Vault Organization
-- Maintain consistent folder structure
-- Use meaningful file naming conventions
-- Leverage Obsidian plugins for enhanced functionality
-
-## Integration with Obsidian Plugins
-
-These skills work well with popular Obsidian plugins:
-
-- **Obsidian Git**: Alternative git integration within Obsidian
-- **Templater**: Advanced template functionality
-- **Daily Notes**: Built-in daily note creation
-- **Calendar**: Calendar-based note navigation
-
-## Related Directories
-
-- `devin.ai/` - Skills for Devin.ai CLI system operations
-- Other skill directories for different domains
-
-## Troubleshooting
-
-### Common Issues
-
-**Vault path not found**
-- Ensure the vault path is correctly configured
-- Check that the vault is accessible from your current environment
-- Update the path in skill configuration files
-
-**Git authentication failures**
-- Verify GitHub CLI is authenticated: `gh auth status`
-- Check repository permissions
-- Ensure remote URL is correct
-
-**Plugin conflicts**
-- Some Obsidian plugins may conflict with external git operations
-- Consider disabling automatic git operations in Obsidian when using backup skills
-- Test skill functionality with plugins disabled
-
-## Support
-
-For issues or questions about specific skills, refer to the individual skill's README documentation in the respective subfolder.
-
 ## Contributing
 
 When adding new skills to this directory:
@@ -224,16 +140,14 @@ When adding new skills to this directory:
 5. Consider different vault configurations and use cases
 6. Update this main README to document the new skill
 
-## Future Enhancements
+## Related Directories
 
-Potential areas for skill development:
+- `devin.ai/` - Skills for Devin.ai CLI system operations
+- Other skill directories for different domains
 
-- Advanced search and query operations
-- Note linking and relationship mapping
-- Content analysis and summarization
-- Cross-vault operations
-- Integration with other PKM tools
-- Automated tagging and categorization
+## Support
+
+For issues or questions about specific skills, refer to the individual skill's README documentation in the respective subfolder.
 
 ## License
 
