@@ -5,8 +5,12 @@
 
 set -e  # Exit on error
 
-VAULT_PATH="/mnt/c/Users/moorek8/OneDrive - Dell Technologies/Code-Repo/Obsidian"
-COMMIT_MESSAGE="${1:-Obsidian vault backup: $(date '+%Y-%m-%d %H:%M:%S')}"
+# Source the shared configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../config.sh"
+
+VAULT_PATH="$OBSIDIAN_VAULT_PATH"
+COMMIT_MESSAGE="${1:-$BACKUP_COMMIT_PREFIX: $(date '+%Y-%m-%d %H:%M:%S')}"
 
 echo "=== Obsidian Vault Backup Script ==="
 echo "Vault path: $VAULT_PATH"
@@ -34,8 +38,8 @@ fi
 
 # Ensure git user identity is configured
 if [ -z "$(git config user.name)" ]; then
-    git config user.name "Devin Backup"
-    git config user.email "devin@backup.local"
+    git config user.name "$GIT_USER_NAME"
+    git config user.email "$GIT_USER_EMAIL"
     echo "Git user identity configured"
 fi
 

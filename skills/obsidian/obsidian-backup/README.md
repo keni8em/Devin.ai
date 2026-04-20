@@ -51,12 +51,17 @@ No additional installation is required - it's part of your Devin configuration.
 
 #### Default Vault Path
 
-The backup script uses this default vault path:
+The backup script uses the vault path from the centralized configuration:
 ```
 /mnt/c/Users/moorek8/OneDrive - Dell Technologies/Code-Repo/Obsidian
 ```
 
-To change this, edit the `VAULT_PATH` variable in `backup.sh`.
+To change this, edit the `OBSIDIAN_VAULT_PATH` variable in the shared configuration file:
+```bash
+/home/moorek8/.config/devin/skills/obsidian/config.sh
+```
+
+See `../CONFIG.md` for detailed configuration documentation.
 
 #### GitHub Remote Setup
 
