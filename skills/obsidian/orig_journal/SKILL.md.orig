@@ -1,5 +1,5 @@
 ---
-name: daily-journal
+name: original-daily-journal
 description: Create a daily journal entry in Obsidian vault
 argument-hint: "[entry text]"
 allowed-tools:
