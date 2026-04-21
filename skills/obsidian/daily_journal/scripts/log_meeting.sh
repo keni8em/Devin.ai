@@ -1,24 +1,46 @@
 #!/bin/bash
 # log_meeting.sh - Log a meeting to the daily journal
-# Usage: log_meeting.sh <date> <time> <title> <type> <duration> [project]
+# Usage: log_meeting.sh [date] [time] <title> <type> <duration> [project]
+# If date is not provided, uses current date
+# If time is not provided, uses current time
 
 # Source configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../config.sh"
 
-# Check if all required parameters are provided
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ] || [ -z "$5" ]; then
-    echo "ERROR: Date, time, title, type, and duration are required" >&2
-    echo "Usage: log_meeting.sh <date> <time> <title> <type> <duration> [project]" >&2
+# Parse parameters - date and time are optional, title, type, and duration are required
+if [ -z "$1" ]; then
+    echo "ERROR: Title, type, and duration are required" >&2
+    echo "Usage: log_meeting.sh [date] [time] <title> <type> <duration> [project]" >&2
     exit 1
 fi
 
-DATE="$1"
-TIME="$2"
-TITLE="$3"
-TYPE="$4"
-DURATION="$5"
-PROJECT="${6:-}"
+# Determine if first parameter is a date (YYYY-MM-DD format) or title
+if [[ $1 =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    DATE="$1"
+    shift
+    # Check if next parameter is a time (HH:MM format) or title
+    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
+        TIME="$1"
+        shift
+    else
+        TIME=$(date +"$TIME_FORMAT")
+    fi
+else
+    DATE=$(date +"$DATE_FORMAT")
+    # Check if first parameter is a time (HH:MM format) or title
+    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
+        TIME="$1"
+        shift
+    else
+        TIME=$(date +"$TIME_FORMAT")
+    fi
+fi
+
+TITLE="$1"
+TYPE="$2"
+DURATION="$3"
+PROJECT="${4:-}"
 
 # Get the journal directory
 JOURNAL_DIR="$OBSIDIAN_VAULT_PATH/$JOURNAL_FOLDER"

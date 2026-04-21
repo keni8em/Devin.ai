@@ -1,22 +1,31 @@
 #!/bin/bash
 # log_task.sh - Log a daily task to the daily journal
-# Usage: log_task.sh <date> <task_description> [project] [target_date]
+# Usage: log_task.sh [date] <task_description> [project] [target_date]
+# If date is not provided, uses current date
+# Task description is required
 
 # Source configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../config.sh"
 
-# Check if required parameters are provided
-if [ -z "$1" ] || [ -z "$2" ]; then
-    echo "ERROR: Date and task description are required" >&2
-    echo "Usage: log_task.sh <date> <task_description> [project] [target_date]" >&2
+# Parse parameters - date is optional, task description is required
+if [ -z "$1" ]; then
+    echo "ERROR: Task description is required" >&2
+    echo "Usage: log_task.sh [date] <task_description> [project] [target_date]" >&2
     exit 1
 fi
 
-DATE="$1"
-TASK="$2"
-PROJECT="${3:-}"
-TARGET_DATE="${4:-}"
+# Determine if first parameter is a date (YYYY-MM-DD format) or task description
+if [[ $1 =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    DATE="$1"
+    shift
+else
+    DATE=$(date +"$DATE_FORMAT")
+fi
+
+TASK="$1"
+PROJECT="${2:-}"
+TARGET_DATE="${3:-}"
 
 # Get the journal directory
 JOURNAL_DIR="$OBSIDIAN_VAULT_PATH/$JOURNAL_FOLDER"

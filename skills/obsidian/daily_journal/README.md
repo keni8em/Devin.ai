@@ -28,7 +28,9 @@ skill daily-journal "Add task to deploy new server"
 
 ## Why Use This Skill?
 
-- **Intelligent context management**: Automatically remembers your last used project and Jira Epic for efficient logging
+- **Intelligent context management**: Priority system for context selection (session-level instruction, remembered choices, existing journal entry)
+- **Autonomous activity logging**: Automatically logs significant work progress, insights, and achievements during work sessions
+- **Automatic quality control**: Spelling and grammar validation for all journal entries
 - **Chronological ordering**: Activities and meetings are automatically sorted by timestamp, supporting backdating
 - **Project organization**: Associate entries with projects from your Obsidian vault
 - **Jira Epic tracking**: Link entries to Jira Epics for better project organization
@@ -38,7 +40,7 @@ skill daily-journal "Add task to deploy new server"
 
 ## Overview
 
-This skill provides a streamlined way to create and manage daily journal entries in your Obsidian vault. It uses a separation of concerns architecture with intelligent decision-making in the skill layer and technical operations in the script layer.
+This skill provides a streamlined way to create and manage daily journal entries in your Obsidian vault. It operates in two modes: user-initiated logging for explicit requests, and autonomous logging that automatically captures significant work progress during development sessions. It uses a separation of concerns architecture with intelligent decision-making in the skill layer and technical operations in the script layer.
 
 ## Architecture
 
@@ -46,8 +48,10 @@ The skill uses a **separation of concerns** approach:
 
 - **Intelligence Layer (Skill)**: Handles decision making, user interaction, context selection, and orchestrates the workflow
   - Date/time capture and parsing
-  - User interaction and context selection  
-  - Decision logic for project/Jira Epic selection
+  - User interaction and context selection
+  - Decision logic for project/Jira Epic selection using priority system
+  - Autonomous activity logging during work sessions
+  - Spelling and grammar validation for all entries
   - Orchestrates the workflow and calling appropriate scripts
 
 - **System Operations Layer (Scripts)**: Handles file system queries and file writing operations
@@ -55,6 +59,7 @@ The skill uses a **separation of concerns** approach:
   - Checking if journal entries exist
   - Creating new journal entries with templates
   - Writing specific entry types (activity, meeting, note, task) to journal files
+  - Automatic date/time capture when not provided
 
 **Why this approach?**
 By separating intelligence from system operations, the skill can make smart decisions about context and user interaction while the scripts handle the technical file operations efficiently.
@@ -75,7 +80,7 @@ By separating intelligence from system operations, the skill can make smart deci
 
 The skill is located in your Devin configuration:
 ```
-/home/moorek8/.config/devin/skills/daily_journal/
+/home/moorek8/.config/devin/skills/obsidian/daily_journal/
 ```
 
 No additional installation is required - it's part of your Devin configuration.
@@ -169,43 +174,75 @@ The skill will insert the entry at the correct chronological position based on t
 
 ### Context Reuse
 
-The skill remembers your last used project and Jira Epic from the current day's journal entry, making it efficient to log multiple entries for the same project without repeatedly selecting the same context.
+The skill uses a priority system for context determination:
+1. **Session-level instruction**: If you provide specific instruction for a project/epic during a session, it applies to all entries
+2. **Remembered choices**: Reuses project/epic choices from previous selections during the same session
+3. **Existing journal entry**: Extracts context from the current day's journal entry if available
+
+This makes it efficient to log multiple entries without repeatedly selecting the same context.
 
 ## How It Works
 
 The skill follows this streamlined process with clear separation of concerns:
 
-1. **User invokes skill**: `skill daily-journal "activity description"`
+1. **User invokes skill**: `skill daily-journal "activity description"` or autonomous logging during work
 2. **Skill (Intent Assessment & Context Selection)**:
    - Determines target date (current date or specified date)
+   - Applies context priority system (session instruction → remembered choices → existing journal)
    - Calls `validate_journal.sh` to initialize journal and get project/epic context
    - If journal exists, extracts last used context for efficiency
-   - Displays available projects and prompts for selection
-   - Displays available Jira Epics for selected project and prompts for selection
+   - Displays available projects and prompts for selection (if no context from priority system)
+   - Displays available Jira Epics for selected project and prompts for selection (if no context from priority system)
    - Gets entry content (from command argument or prompts user)
+   - Applies spelling and grammar validation
 3. **Script Execution (Technical Operations)**:
    - Calls appropriate logging script (`log_activity.sh`, `log_meeting.sh`, `log_note.sh`, or `log_task.sh`)
+   - Scripts handle automatic date/time capture if not provided
    - Scripts handle file operations and content insertion
    - Chronological ordering handled for activities and meetings
    - Tasks grouped by project automatically
 4. **Result**: Journal entry created or updated in Obsidian vault
 
 **Key Separation of Concerns:**
-- **Skill**: User interaction, context selection, decision making, workflow orchestration
-- **Scripts**: File system queries, file writing operations, content formatting
+- **Skill**: User interaction, context selection, decision making, workflow orchestration, quality validation
+- **Scripts**: File system queries, file writing operations, content formatting, automatic timestamp handling
 - **Config**: Configuration settings and paths
 
 ### Key Features
 
+- **Autonomous activity logging**: Automatically captures significant work progress during development sessions
+- **Context priority system**: Session-level instruction, remembered choices, and existing journal context
+- **Automatic quality control**: Spelling and grammar validation for all entries
 - **Chronological ordering**: Activities and meetings automatically sorted by timestamp
-- **Context reuse**: Remembers last used project/Jira Epic for efficient logging
+- **Context reuse**: Intelligent context management reduces repetitive selections
 - **Project grouping**: Tasks automatically organized by project
 - **Template-based**: Creates entries from customizable templates
 - **Backdating support**: Log entries for specific times in the past
 - **Multiple entry types**: Activities, meetings, notes, and tasks
 - **Intelligent summary generation**: Generates note summaries from request context
+- **Automatic timestamp handling**: Scripts capture current date/time when not provided
 
 ## Advanced Usage
+
+### Autonomous Activity Logging
+
+In addition to user-initiated logging, the skill supports autonomous activity logging during work sessions. When working on development tasks, the skill automatically logs significant work progress without requiring explicit instruction.
+
+**Autonomous logging triggers:**
+- Completion of significant work items or milestones
+- Discovery of important information or resources
+- Resolution of challenges or issues encountered
+- Key insights or realizations during the work
+- Structural changes to documents or code
+- Successful deployment or configuration steps
+- Testing and validation results
+
+**Autonomous logging characteristics:**
+- Uses current date/time automatically
+- Applies the same context priority system as user-initiated logging
+- Includes spelling and grammar validation
+- Does not interrupt workflow or require confirmation
+- Logs significant work items, not every minor action
 
 ### Detailed Entry Process
 
@@ -271,7 +308,7 @@ Summary text here
 The skill folder structure:
 
 ```
-daily_journal/
+obsidian/daily_journal/
 ├── SKILL.md          # Skill configuration and execution instructions
 ├── config.sh         # Skill-specific configuration
 ├── scripts/          # System operations scripts
@@ -308,21 +345,25 @@ daily_journal/
   - Inserts activities in chronological order
   - Handles project and Jira Epic context
   - Manages time-based ordering
+  - Accepts optional date/time parameters (captures current automatically if not provided)
 
 - **log_meeting.sh**: Meeting logging script:
   - Inserts meetings in chronological order
   - Handles meeting metadata (type, duration, project)
   - Manages time-based ordering
+  - Accepts optional date/time parameters (captures current automatically if not provided)
 
 - **log_note.sh**: Note logging script:
   - Inserts notes with project/epic context
   - Generates summaries from request context
   - Handles multi-line note format
+  - Accepts optional date/time parameters (captures current automatically if not provided)
 
 - **log_task.sh**: Task logging script:
   - Inserts tasks with project grouping
   - Manages task organization by project
   - Handles target dates for future tasks
+  - Accepts optional date parameter (captures current automatically if not provided)
 
 - **README.md**: Comprehensive documentation covering:
   - Quick start guide for immediate usage
@@ -347,7 +388,7 @@ Verify that the `DAILY_JOURNAL_TEMPLATE` file exists in your Templates folder as
 Make sure your time format matches the configured `TIME_FORMAT` (default: HH:MM in 24-hour format). The skill compares timestamps as strings for ordering.
 
 ### "Context not being reused"
-The skill only reuses context from the current day's journal entry. If you're working across multiple days, you'll need to select the project/epic each time.
+The skill uses a priority system for context: session-level instruction → remembered choices → existing journal entry. If context isn't being reused as expected, check that you haven't provided conflicting session instructions or that the journal entry has the expected context.
 
 ## License
 

@@ -9,7 +9,13 @@
   "permissions": {
     "allow": [
       "Write(/mnt/c/Users/moorek8/OneDrive - Dell Technologies/Code-Repo/Obsidian/**)",
-      "Read(/mnt/c/Users/moorek8/OneDrive - Dell Technologies/Code-Repo/Obsidian)"
+      "Read(/mnt/c/Users/moorek8/OneDrive - Dell Technologies/Code-Repo/Obsidian)",
+      "Fetch(domain:docs.nvidia.com)",
+      "Fetch(domain:catalog.ngc.nvidia.com)"
     ]
-  }
+  },
+  "version": 1,
+  "skip_workspace_trust": true,
+  "skip_home_directory_warning": true,
+  "theme_auto_detect": "always"
 }

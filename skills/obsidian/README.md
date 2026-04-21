@@ -16,22 +16,29 @@ Automatically sync your Obsidian vault with a GitHub repository.
 - **Usage**: `skill obsidian-backup [commit message]`
 - **Documentation**: See `obsidian-backup/README.md`
 
-### daily-journal
+### daily_journal
 Create daily journal entries in your Obsidian vault.
 
 - **Purpose**: Automated daily journal creation
-- **Location**: `daily-journal/`
+- **Location**: `daily_journal/`
 - **Usage**: `skill daily-journal`
-- **Documentation**: See `daily-journal/SKILL.md`
+- **Documentation**: See `daily_journal/SKILL.md`
 
 ## Structure
 
 ```
 obsidian/
 ├── README.md              # This file - overview of Obsidian skills
-├── daily-journal/         # Daily journal automation skill
+├── daily_journal/         # Daily journal automation skill
 │   ├── SKILL.md          # Skill configuration
-│   └── config.sh         # Journal-specific configuration
+│   ├── config.sh         # Journal-specific configuration
+│   ├── README.md         # Skill documentation
+│   └── scripts/          # System operations scripts
+│       ├── validate_journal.sh
+│       ├── log_activity.sh
+│       ├── log_meeting.sh
+│       ├── log_note.sh
+│       └── log_task.sh
 └── obsidian-backup/      # Vault backup skill
     ├── SKILL.md          # Skill configuration
     ├── backup.sh         # Backup script
@@ -111,7 +118,7 @@ Skills in this directory may require:
 
 - **obsidian-backup**: Uses `obsidian-backup/config.sh`
   - Vault path, GitHub settings, backup preferences
-- **daily-journal**: Uses `daily-journal/config.sh`
+- **daily_journal**: Uses `daily_journal/config.sh`
   - Vault path, journal folder, date/time formats
 
 ### Benefits

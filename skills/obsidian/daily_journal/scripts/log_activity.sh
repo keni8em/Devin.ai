@@ -1,23 +1,45 @@
 #!/bin/bash
 # log_activity.sh - Log an activity to the daily journal
-# Usage: log_activity.sh <date> <time> <activity_description> [project] [jira_epic]
+# Usage: log_activity.sh [date] [time] <activity_description> [project] [jira_epic]
+# If date is not provided, uses current date
+# If time is not provided, uses current time
 
 # Source configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../config.sh"
 
-# Check if all parameters are provided
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
-    echo "ERROR: Date, time, and activity description are required" >&2
-    echo "Usage: log_activity.sh <date> <time> <activity_description> [project] [jira_epic]" >&2
+# Parse parameters - date and time are optional, activity description is required
+if [ -z "$1" ]; then
+    echo "ERROR: Activity description is required" >&2
+    echo "Usage: log_activity.sh [date] [time] <activity_description> [project] [jira_epic]" >&2
     exit 1
 fi
 
-DATE="$1"
-TIME="$2"
-ACTIVITY="$3"
-PROJECT="${4:-}"
-JIRA_EPIC="${5:-}"
+# Determine if first parameter is a date (YYYY-MM-DD format) or activity description
+if [[ $1 =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    DATE="$1"
+    shift
+    # Check if next parameter is a time (HH:MM format) or activity description
+    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
+        TIME="$1"
+        shift
+    else
+        TIME=$(date +"$TIME_FORMAT")
+    fi
+else
+    DATE=$(date +"$DATE_FORMAT")
+    # Check if first parameter is a time (HH:MM format) or activity description
+    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
+        TIME="$1"
+        shift
+    else
+        TIME=$(date +"$TIME_FORMAT")
+    fi
+fi
+
+ACTIVITY="$1"
+PROJECT="${2:-}"
+JIRA_EPIC="${3:-}"
 
 # Get the journal directory
 JOURNAL_DIR="$OBSIDIAN_VAULT_PATH/$JOURNAL_FOLDER"
