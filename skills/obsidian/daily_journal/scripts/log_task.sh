@@ -65,7 +65,7 @@ if [ -n "$PROJECT" ]; then
             sed -i "/^- \\[ \\].*:/a\\$TASK_LINE" "$ENTRY_FILE"
         else
             # Insert at the beginning of the Tasks section (after header)
-            sed -i "/^## Tasks$/a\\$TASK_LINE" "$ENTRY_FILE"
+            sed -i "/^## $SECTION_TASKS$/a\\$TASK_LINE" "$ENTRY_FILE"
         fi
     fi
 else
@@ -75,7 +75,7 @@ else
         sed -i "/^- \\[ \\]/a\\$TASK_LINE" "$ENTRY_FILE"
     else
         # Insert at the beginning of the Tasks section (after header)
-        sed -i "/^## Tasks$/a\\$TASK_LINE" "$ENTRY_FILE"
+        sed -i "/^## $SECTION_TASKS$/a\\$TASK_LINE" "$ENTRY_FILE"
     fi
 fi
 

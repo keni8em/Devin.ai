@@ -62,14 +62,14 @@ fi
 
 # Find the Activity Log section and insert in chronological order
 # Get all existing activity times and their line numbers
-ACTIVITY_TIMES=$(sed -n '/^## Activity Log/,/^---/p' "$ENTRY_FILE" | grep -n "^\[")
+ACTIVITY_TIMES=$(sed -n "/^## $SECTION_ACTIVITY/,/^---/p" "$ENTRY_FILE" | grep -n "^\[")
 
 if [ -z "$ACTIVITY_TIMES" ]; then
     # No existing activities, insert after the header
-    sed -i "/^## Activity Log$/a\\\n$ACTIVITY_LINE" "$ENTRY_FILE"
+    sed -i "/^## $SECTION_ACTIVITY$/a\\\n$ACTIVITY_LINE" "$ENTRY_FILE"
 else
     # Find the correct position based on time
-    SECTION_START=$(grep -n "^## Activity Log" "$ENTRY_FILE" | cut -d: -f1)
+    SECTION_START=$(grep -n "^## $SECTION_ACTIVITY" "$ENTRY_FILE" | cut -d: -f1)
     INSERT_LINE=""  # Will hold the line to insert before
     
     while IFS=: read -r line_num content; do

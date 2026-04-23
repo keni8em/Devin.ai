@@ -85,15 +85,15 @@ fi
 
 # Find the Notes section and insert the note
 # Check for existing entries
-if sed -n '/^## Notes/,/^---/p' "$ENTRY_FILE" | grep -q "^\["; then
+if sed -n "/^## $SECTION_NOTES/,/^---/p" "$ENTRY_FILE" | grep -q "^\["; then
     # Has existing entries, find the last one and insert after it
-    LAST_LINE=$(sed -n '/^## Notes/,/^---/p' "$ENTRY_FILE" | grep -n "^\[" | tail -1 | cut -d: -f1)
-    SECTION_START=$(grep -n "^## Notes" "$ENTRY_FILE" | cut -d: -f1)
+    LAST_LINE=$(sed -n "/^## $SECTION_NOTES/,/^---/p" "$ENTRY_FILE" | grep -n "^\[" | tail -1 | cut -d: -f1)
+    SECTION_START=$(grep -n "^## $SECTION_NOTES" "$ENTRY_FILE" | cut -d: -f1)
     ACTUAL_LINE=$((SECTION_START + LAST_LINE))  # Insert after the summary line
     sed -i "${ACTUAL_LINE}a\\\n$NOTE_HEADER\n$SUMMARY" "$ENTRY_FILE"
 else
     # No existing entries, insert after the header
-    sed -i "/^## Notes$/a\\\n$NOTE_HEADER\n$SUMMARY" "$ENTRY_FILE"
+    sed -i "/^## $SECTION_NOTES$/a\\\n$NOTE_HEADER\n$SUMMARY" "$ENTRY_FILE"
 fi
 
 echo "LOGGED:$ENTRY_FILE"

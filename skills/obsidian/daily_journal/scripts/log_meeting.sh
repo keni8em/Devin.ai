@@ -61,14 +61,14 @@ fi
 
 # Find the Meetings Log section and insert in chronological order
 # Get all existing meeting times and their line numbers
-MEETING_TIMES=$(sed -n '/^## Meetings Log/,/^---/p' "$ENTRY_FILE" | grep -n "^\[")
+MEETING_TIMES=$(sed -n "/^## $SECTION_MEETINGS/,/^---/p" "$ENTRY_FILE" | grep -n "^\[")
 
 if [ -z "$MEETING_TIMES" ]; then
     # No existing meetings, insert after the header
-    sed -i "/^## Meetings Log$/a\\\n$MEETING_LINE" "$ENTRY_FILE"
+    sed -i "/^## $SECTION_MEETINGS$/a\\\n$MEETING_LINE" "$ENTRY_FILE"
 else
     # Find the correct position based on time
-    SECTION_START=$(grep -n "^## Meetings Log" "$ENTRY_FILE" | cut -d: -f1)
+    SECTION_START=$(grep -n "^## $SECTION_MEETINGS" "$ENTRY_FILE" | cut -d: -f1)
     INSERT_LINE=""  # Will hold the line to insert before
     
     while IFS=: read -r line_num content; do
