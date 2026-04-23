@@ -4,33 +4,39 @@ Create and manage daily journal entries in your Obsidian vault with project and 
 
 ## Quick Start
 
-Get started immediately with these simple commands:
+**Invoke the skill without a logging request:**
+```
+/daily_journal
+```
+The skill will tell you what it does and ask if you'd like to set session-level project and Jira Epic context. This is useful when you'll be logging multiple entries for the same project in a single session.
 
 **Log an activity:**
-```bash
-skill daily-journal "Completed code review for authentication module"
+```
+/daily_journal log activity Completed code review for authentication module
 ```
 
 **Log a meeting:**
-```bash
-skill daily-journal "Add team standup meeting"
+```
+/daily_journal log meeting Team standup meeting
 ```
 
 **Add a note:**
-```bash
-skill daily-journal "Note about challenges faced today"
+```
+/daily_journal log note Note about challenges faced today
 ```
 
 **Add a task:**
-```bash
-skill daily-journal "Add task to deploy new server"
+```
+/daily_journal log task Add task to deploy new server
 ```
 
 ## Why Use This Skill?
 
+- **Session-level context**: Set project and Jira Epic once per session to apply to all entries, improving efficiency
+- **Natural language parsing**: Extracts information from natural language requests (e.g., "log meeting OIL and Development Team meeting at 15:30 for 30 minutes no project") to minimize prompts
 - **Intelligent context management**: Priority system for context selection (session-level instruction, remembered choices, existing journal entry)
 - **Autonomous activity logging**: Automatically logs significant work progress, insights, and achievements during work sessions
-- **Automatic quality control**: Spelling and grammar validation for all journal entries
+- **Automatic quality control**: Proofreading for all journal entries, including spelling, grammar, and sentence simplification
 - **Chronological ordering**: Activities and meetings are automatically sorted by timestamp, supporting backdating
 - **Project organization**: Associate entries with projects from your Obsidian vault
 - **Jira Epic tracking**: Link entries to Jira Epics for better project organization
@@ -42,6 +48,20 @@ skill daily-journal "Add task to deploy new server"
 
 This skill provides a streamlined way to create and manage daily journal entries in your Obsidian vault. It operates in two modes: user-initiated logging for explicit requests, and autonomous logging that automatically captures significant work progress during development sessions. It uses a separation of concerns architecture with intelligent decision-making in the skill layer and technical operations in the script layer.
 
+### Session-Level Context
+
+When you invoke the skill without a logging request (`/daily_journal`), you can set project and Jira Epic context for the current session. This context is then applied to all entries you log during that session, reducing repetitive prompts and improving efficiency. Session-level context takes priority over remembered choices and existing journal entry context, making it ideal for focused work sessions on a specific project.
+
+## Prerequisites
+
+- **Devin AI**: Access to the Devin AI skills system
+- **Obsidian vault**: Configured with the following structure:
+  - Daily Journal folder for journal entries
+  - OIL R&D Journal folder for project organization
+  - Templates folder with journal templates
+- **Bash shell environment**: For script execution
+- **Daily Journal Template**: Template file in your Templates folder
+
 ## Architecture
 
 The skill uses a **separation of concerns** approach:
@@ -51,7 +71,7 @@ The skill uses a **separation of concerns** approach:
   - User interaction and context selection
   - Decision logic for project/Jira Epic selection using priority system
   - Autonomous activity logging during work sessions
-  - Spelling and grammar validation for all entries
+  - Proofreading for all entries, including spelling, grammar, and sentence simplification
   - Orchestrates the workflow and calling appropriate scripts
 
 - **System Operations Layer (Scripts)**: Handles file system queries and file writing operations
@@ -63,16 +83,6 @@ The skill uses a **separation of concerns** approach:
 
 **Why this approach?**
 By separating intelligence from system operations, the skill can make smart decisions about context and user interaction while the scripts handle the technical file operations efficiently.
-
-## Requirements
-
-- Obsidian vault with the following structure:
-  - Daily Journal folder for journal entries
-  - OIL R&D Journal folder for project organization
-  - Templates folder with journal templates
-- Bash shell environment
-- Daily Journal Template file in your Templates folder
-- Devin AI with access to the skills system
 
 ## Installation & Configuration
 
@@ -132,8 +142,8 @@ Each project can contain multiple OCTO (Jira Epic) folders for context tracking.
 ### Basic Usage
 
 **Log an activity with automatic context:**
-```bash
-skill daily-journal "Completed code review"
+```
+/daily_journal log activity Completed code review
 ```
 
 The skill will:
@@ -141,33 +151,51 @@ The skill will:
 2. Prompt for Jira Epic selection (if project selected)
 3. Insert the activity in chronological order
 
-**Log a meeting with details:**
-```bash
-skill daily-journal "Add team standup"
+**Log a meeting with natural language parsing:**
+```
+/daily_journal log meeting OIL and Development Team meeting at 15:30 for 30 minutes no project
 ```
 
-The skill will prompt for meeting time, title, type, and duration.
+The skill will:
+1. Parse the request to extract: entry type (meeting), title, time (15:30), duration (30 minutes), project (no project)
+2. Skip project/Jira Epic selection (user specified "no project")
+3. Only ask for meeting type (not provided in request)
+4. Insert the meeting at the correct chronological position
 
 **Add a diary-style note:**
-```bash
-skill daily-journal "Note about challenges faced today"
+```
+/daily_journal log note Note about challenges faced today
 ```
 
 The skill will generate a summary based on your request context.
 
 **Add a task to your task list:**
-```bash
-skill daily-journal "Add task to deploy new server"
+```
+/daily_journal log task Add task to deploy new server
 ```
 
 The skill will prompt for project context and organize tasks by project.
+
+### Example Output
+
+When you log an activity, the skill confirms creation:
+
+```
+**Journal entry**: updated
+**File**: /mnt/c/Users/moorek8/OneDrive - Dell Technologies/Code-Repo/Obsidian/OIL Notebook/Daily Journal/2026-04-22.md
+**Date**: Wed 22 April 2026
+
+The activity "Completed code review" has been logged to your daily journal.
+```
+
+The journal entry is automatically added to your Obsidian vault in the appropriate section with proper formatting.
 
 ### Chronological Ordering
 
 Activities and meetings support backdating with specific timestamps:
 
-```bash
-skill daily-journal "Log activity at [14:30] for code review completed this morning"
+```
+/daily_journal log activity at 14:30 Code review completed this morning
 ```
 
 The skill will insert the entry at the correct chronological position based on the timestamp.
@@ -185,16 +213,17 @@ This makes it efficient to log multiple entries without repeatedly selecting the
 
 The skill follows this streamlined process with clear separation of concerns:
 
-1. **User invokes skill**: `skill daily-journal "activity description"` or autonomous logging during work
+1. **User invokes skill**: `/daily_journal log activity <description>` or autonomous logging during work
 2. **Skill (Intent Assessment & Context Selection)**:
    - Determines target date (current date or specified date)
    - Applies context priority system (session instruction → remembered choices → existing journal)
+   - Changes to skill directory for script execution
    - Calls `validate_journal.sh` to initialize journal and get project/epic context
    - If journal exists, extracts last used context for efficiency
    - Displays available projects and prompts for selection (if no context from priority system)
    - Displays available Jira Epics for selected project and prompts for selection (if no context from priority system)
    - Gets entry content (from command argument or prompts user)
-   - Applies spelling and grammar validation
+   - Applies proofreading, including spelling, grammar, and sentence simplification
 3. **Script Execution (Technical Operations)**:
    - Calls appropriate logging script (`log_activity.sh`, `log_meeting.sh`, `log_note.sh`, or `log_task.sh`)
    - Scripts handle automatic date/time capture if not provided
@@ -210,9 +239,10 @@ The skill follows this streamlined process with clear separation of concerns:
 
 ### Key Features
 
+- **Natural language parsing**: Extracts information from natural language requests to minimize prompts
 - **Autonomous activity logging**: Automatically captures significant work progress during development sessions
 - **Context priority system**: Session-level instruction, remembered choices, and existing journal context
-- **Automatic quality control**: Spelling and grammar validation for all entries
+- **Automatic quality control**: Proofreading for all entries, including spelling, grammar, and sentence simplification
 - **Chronological ordering**: Activities and meetings automatically sorted by timestamp
 - **Context reuse**: Intelligent context management reduces repetitive selections
 - **Project grouping**: Tasks automatically organized by project
@@ -240,7 +270,7 @@ In addition to user-initiated logging, the skill supports autonomous activity lo
 **Autonomous logging characteristics:**
 - Uses current date/time automatically
 - Applies the same context priority system as user-initiated logging
-- Includes spelling and grammar validation
+- Includes proofreading, including spelling, grammar, and sentence simplification
 - Does not interrupt workflow or require confirmation
 - Logs significant work items, not every minor action
 
@@ -249,7 +279,7 @@ In addition to user-initiated logging, the skill supports autonomous activity lo
 When you invoke the skill, it follows this detailed process:
 
 ```
-skill daily-journal "Fixed authentication bug"
+/daily_journal log activity Fixed authentication bug
 ```
 
 **Step 1: Date/Time Capture**
@@ -257,6 +287,7 @@ skill daily-journal "Fixed authentication bug"
 - Or uses provided date if specified
 
 **Step 2: Journal Validation**
+- Changes to skill directory for script execution
 - Checks if journal file exists for the target date
 - Creates file from template if it doesn't exist
 - Gets all projects and their associated OCTO epics
