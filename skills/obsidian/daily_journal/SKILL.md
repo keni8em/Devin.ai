@@ -9,7 +9,6 @@ allowed-tools:
   - find_file_by_name
   - ask_user_question
 triggers:
-  - model
   - user
 ---
 
@@ -26,54 +25,12 @@ The skill is responsible for:
 - User interaction and context selection
 - Decision logic for project/Jira Epic selection
 - Orchestrating the workflow and calling appropriate scripts
-- Autonomous activity logging during work sessions
-- Intelligent triggering of autonomous logging based on work progress and significance
 
 The scripts are responsible for:
 - Querying the file system for projects and Jira Epics
 - Checking if journal entries exist
 - Creating new journal entries with templates
 - Writing specific entry types (activity, meeting, note, task) to journal files
-
-## Autonomous Activity Logging
-
-In addition to user-initiated logging, this skill supports autonomous activity logging during work sessions. When working on user tasks, automatically log activities to the daily journal for distinct work progress, challenges, issues, insights, and achievements without waiting for explicit user instruction.
-
-### When to Trigger Autonomous Logging
-
-Automatically log activities when:
-- **Completion of significant work items or milestones**: Finishing a major feature, resolving a complex bug, completing a documentation section
-- **Discovery of important information or resources**: Finding critical documentation, discovering useful tools or libraries, locating key configuration files
-- **Resolution of challenges or issues encountered**: Solving technical problems, overcoming obstacles, fixing errors or bugs
-- **Key insights or realizations during the work**: Understanding complex systems, recognizing patterns, making important connections
-- **Structural changes to documents or code**: Major refactoring, file reorganization, significant architectural changes
-- **Successful deployment or configuration steps**: Completing setup processes, successful deployments, configuration changes
-- **Testing and validation results**: Important test outcomes, validation successes, failure analysis and resolution
-
-### Autonomous Logging Guidelines
-
-- **Context determination priority system**: Use the following priority order to determine project and Jira Epic context:
-  1. **Session-level instruction**: If the user has specifically provided instruction in the session that entries will be for a specific project and epic, use that context (this applies to both autonomous and user-initiated requests)
-  2. **Remembered choices**: If the SKILL can remember the choices made during the last project and epic ask_user_question instance, use that context
-  3. **Existing journal entry context**: Extract project and Jira Epic context from the current day's existing journal entry if available
-  4. **No context available**: If no context is available through any of the above methods, log the entry without project/Jira Epic context
-- **Meaningful descriptions**: Provide clear, descriptive activity entries that capture the significance of the work
-- **Appropriate entry types**: Use Activity Log for work progress, achievements, and structural changes; use Notes for insights, realizations, and observations
-- **No user interaction required**: Autonomous logging should not interrupt the user's workflow or require confirmation
-- **Quality content**: Apply proofreading to autonomous entries just like user-initiated entries
-- **Relevance threshold**: Log significant work items, not every minor action or edit
-- **Timestamp handling**: The log_xxxx.sh scripts automatically handle current date/time capture, so no special timestamp handling is needed for autonomous entries
-- **Add to appropriate section**: The autonomous entry should be added to the appropriate section based on content type (Activity Log or Notes)
-
-### Integration with User-Initiated Logging
-
-Autonomous logging complements user-initiated logging:
-- **User-initiated**: Explicit requests like "log this activity" or "add a note about..."
-- **Autonomous**: Automatic logging during work without explicit instruction
-- **Both use the same scripts**: log_activity.sh, log_note.sh, etc.
-- **Both apply quality control**: Proofreading applies to both
-- **Both use context priority system**: Session-level instruction → Remembered choices → Existing journal entry context → No context
-- **Both benefit from automatic timestamp handling**: The log_xxxx.sh scripts handle date/time capture automatically
 
 ## Available Scripts
 
@@ -129,20 +86,8 @@ All scripts are located in the `scripts/` directory within the skill and are sou
 
 ## Instructions
 
-This skill operates in two modes:
+This skill operates in one mode:
 - **User-initiated logging**: When explicitly asked to log activities, meetings, notes, or tasks
-- **Autonomous logging**: When working on user tasks, automatically log significant work progress, insights, and achievements
-
-The following instructions apply to user-initiated logging. For autonomous logging guidelines, see the "Autonomous Activity Logging" section above.
-
-0. **Handle invocation without logging request**:
-   - If the skill is invoked without a request to log an entry (e.g., "/daily_journal" without specifying log activity/meeting/note/task):
-     - Tell the user what this skill does
-     - Provide a brief description of the skill's capabilities
-     - Ask the user if they would like to set the project and Jira Epic for the current Devin session
-     - If user wants to set session-level context, ask for project and Jira Epic using ask_user_question
-     - Store the session-level instruction for use in subsequent entries during this session
-     - Do not create any journal entry
 
 1. **Determine target date**:
    - Check if a specific date was mentioned in the user's request (e.g., "Monday", "tomorrow", "2026-04-20")
@@ -170,9 +115,8 @@ The following instructions apply to user-initiated logging. For autonomous loggi
    - Store the context data for later use in project and epic selection
 
 3. **Select project context**:
-   - **Priority check**: First check if the user has provided session-level instruction for a specific project. If yes, use that project and skip to Jira Epic selection (or skip Jira Epic selection if epic was also specified).
-   - **Remembered choices check**: If no session-level instruction, check if project/epic choices were made in a previous ask_user_question instance during this session. If yes, use the most recent project choice and skip to Jira Epic selection (or skip if epic was also chosen).
-   - If no context from priority checks, proceed with user selection:
+   - **Remembered choices check**: Check if project/epic choices were made in a previous ask_user_question instance during this session. If yes, use the most recent project choice and skip to Jira Epic selection (or skip if epic was also chosen).
+   - If no context from remembered choices, proceed with user selection:
    - Parse the stored context output to extract project names (first field of each pipe-delimited line)
    - Display the full list of available project names to the user (only project names, not epic details)
    - Determine the 4 options to present:
@@ -191,9 +135,8 @@ The following instructions apply to user-initiated logging. For autonomous loggi
 
 4. **Select Jira Epic context**:
    - If project context was skipped (user selected "No Project"): skip Jira Epic selection entirely (leave Jira field blank)
-   - **Priority check**: If project context was selected, first check if the user has provided session-level instruction for a specific Jira Epic. If yes, use that epic and skip user selection.
-   - **Remembered choices check**: If no session-level instruction, check if project/epic choices were made in a previous ask_user_question instance during this session. If yes, use the most recent epic choice and skip user selection.
-   - If no context from priority checks, proceed with user selection:
+   - **Remembered choices check**: If project context was selected, check if project/epic choices were made in a previous ask_user_question instance during this session. If yes, use the most recent epic choice and skip user selection.
+   - If no context from remembered choices, proceed with user selection:
    - Parse the stored context output from step 2 to extract epics for the selected project
      - Find the line matching the selected project name
      - Extract fields after the first (split by pipe) to get the list of epics

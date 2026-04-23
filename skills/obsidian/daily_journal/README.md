@@ -4,12 +4,6 @@ Create and manage daily journal entries in your Obsidian vault with project and 
 
 ## Quick Start
 
-**Invoke the skill without a logging request:**
-```
-/daily_journal
-```
-The skill will tell you what it does and ask if you'd like to set session-level project and Jira Epic context. This is useful when you'll be logging multiple entries for the same project in a single session.
-
 **Log an activity:**
 ```
 /daily_journal log activity Completed code review for authentication module
@@ -32,10 +26,8 @@ The skill will tell you what it does and ask if you'd like to set session-level 
 
 ## Why Use This Skill?
 
-- **Session-level context**: Set project and Jira Epic once per session to apply to all entries, improving efficiency
 - **Natural language parsing**: Extracts information from natural language requests (e.g., "log meeting OIL and Development Team meeting at 15:30 for 30 minutes no project") to minimize prompts
-- **Intelligent context management**: Priority system for context selection (session-level instruction, remembered choices, existing journal entry)
-- **Autonomous activity logging**: Automatically logs significant work progress, insights, and achievements during work sessions
+- **Intelligent context management**: Priority system for context selection (remembered choices, existing journal entry)
 - **Automatic quality control**: Proofreading for all journal entries, including spelling, grammar, and sentence simplification
 - **Chronological ordering**: Activities and meetings are automatically sorted by timestamp, supporting backdating
 - **Project organization**: Associate entries with projects from your Obsidian vault
@@ -46,11 +38,7 @@ The skill will tell you what it does and ask if you'd like to set session-level 
 
 ## Overview
 
-This skill provides a streamlined way to create and manage daily journal entries in your Obsidian vault. It operates in two modes: user-initiated logging for explicit requests, and autonomous logging that automatically captures significant work progress during development sessions. It uses a separation of concerns architecture with intelligent decision-making in the skill layer and technical operations in the script layer.
-
-### Session-Level Context
-
-When you invoke the skill without a logging request (`/daily_journal`), you can set project and Jira Epic context for the current session. This context is then applied to all entries you log during that session, reducing repetitive prompts and improving efficiency. Session-level context takes priority over remembered choices and existing journal entry context, making it ideal for focused work sessions on a specific project.
+This skill provides a streamlined way to create and manage daily journal entries in your Obsidian vault. It operates in one mode: user-initiated logging for explicit requests. It uses a separation of concerns architecture with intelligent decision-making in the skill layer and technical operations in the script layer.
 
 ## Prerequisites
 
@@ -70,7 +58,6 @@ The skill uses a **separation of concerns** approach:
   - Date/time capture and parsing
   - User interaction and context selection
   - Decision logic for project/Jira Epic selection using priority system
-  - Autonomous activity logging during work sessions
   - Proofreading for all entries, including spelling, grammar, and sentence simplification
   - Orchestrates the workflow and calling appropriate scripts
 
@@ -203,9 +190,8 @@ The skill will insert the entry at the correct chronological position based on t
 ### Context Reuse
 
 The skill uses a priority system for context determination:
-1. **Session-level instruction**: If you provide specific instruction for a project/epic during a session, it applies to all entries
-2. **Remembered choices**: Reuses project/epic choices from previous selections during the same session
-3. **Existing journal entry**: Extracts context from the current day's journal entry if available
+1. **Remembered choices**: Reuses project/epic choices from previous selections during the same session
+2. **Existing journal entry**: Extracts context from the current day's journal entry if available
 
 This makes it efficient to log multiple entries without repeatedly selecting the same context.
 
@@ -213,10 +199,10 @@ This makes it efficient to log multiple entries without repeatedly selecting the
 
 The skill follows this streamlined process with clear separation of concerns:
 
-1. **User invokes skill**: `/daily_journal log activity <description>` or autonomous logging during work
+1. **User invokes skill**: `/daily_journal log activity <description>`
 2. **Skill (Intent Assessment & Context Selection)**:
    - Determines target date (current date or specified date)
-   - Applies context priority system (session instruction → remembered choices → existing journal)
+   - Applies context priority system (remembered choices → existing journal)
    - Changes to skill directory for script execution
    - Calls `validate_journal.sh` to initialize journal and get project/epic context
    - If journal exists, extracts last used context for efficiency
@@ -240,8 +226,7 @@ The skill follows this streamlined process with clear separation of concerns:
 ### Key Features
 
 - **Natural language parsing**: Extracts information from natural language requests to minimize prompts
-- **Autonomous activity logging**: Automatically captures significant work progress during development sessions
-- **Context priority system**: Session-level instruction, remembered choices, and existing journal context
+- **Context priority system**: Remembered choices and existing journal context
 - **Automatic quality control**: Proofreading for all entries, including spelling, grammar, and sentence simplification
 - **Chronological ordering**: Activities and meetings automatically sorted by timestamp
 - **Context reuse**: Intelligent context management reduces repetitive selections
@@ -253,26 +238,6 @@ The skill follows this streamlined process with clear separation of concerns:
 - **Automatic timestamp handling**: Scripts capture current date/time when not provided
 
 ## Advanced Usage
-
-### Autonomous Activity Logging
-
-In addition to user-initiated logging, the skill supports autonomous activity logging during work sessions. When working on development tasks, the skill automatically logs significant work progress without requiring explicit instruction.
-
-**Autonomous logging triggers:**
-- Completion of significant work items or milestones
-- Discovery of important information or resources
-- Resolution of challenges or issues encountered
-- Key insights or realizations during the work
-- Structural changes to documents or code
-- Successful deployment or configuration steps
-- Testing and validation results
-
-**Autonomous logging characteristics:**
-- Uses current date/time automatically
-- Applies the same context priority system as user-initiated logging
-- Includes proofreading, including spelling, grammar, and sentence simplification
-- Does not interrupt workflow or require confirmation
-- Logs significant work items, not every minor action
 
 ### Detailed Entry Process
 
@@ -419,7 +384,7 @@ Verify that the `DAILY_JOURNAL_TEMPLATE` file exists in your Templates folder as
 Make sure your time format matches the configured `TIME_FORMAT` (default: HH:MM in 24-hour format). The skill compares timestamps as strings for ordering.
 
 ### "Context not being reused"
-The skill uses a priority system for context: session-level instruction → remembered choices → existing journal entry. If context isn't being reused as expected, check that you haven't provided conflicting session instructions or that the journal entry has the expected context.
+The skill uses a priority system for context: remembered choices → existing journal entry. If context isn't being reused as expected, check that the journal entry has the expected context.
 
 ## License
 
