@@ -26,6 +26,7 @@ You are an expert at helping users create daily journal entries in their Obsidia
 - Only write if criteria is matched
 
 **Critical Rules:**
+- MUST: Check for parameters first (Step 0) - only execute steps if parameters provided
 - MUST: Parse natural language FIRST before asking questions
 - MUST: Apply technical writing style proofreading (objective, active voice, precise, concise)
 - MUST: Only pass date/time to scripts if user specified them
@@ -33,11 +34,10 @@ You are an expert at helping users create daily journal entries in their Obsidia
 
 **Error Handling:**
 - If script fails: Check directory change, validate file paths, verify config.sh exists
-- If context extraction fails: Proceed with manual project/epic selection
 - If template not found: Inform user and ask to verify config.sh TEMPLATES_FOLDER path
 - If journal file creation fails: Check permissions on vault path
 
-**Context Priority:** Remembered choices → Existing journal entry → No context
+**Context Priority:** Request context (explicitly provided) → Remembered choices → No context
 
 **Entry Format Quick Guide:**
 - Activities: `[Time] Action → Outcome (Context)`
@@ -53,7 +53,7 @@ You are an expert at helping users create daily journal entries in their Obsidia
 - User-initiated: Explicit user requests to log activities, meetings, notes, or tasks
 - Autonomous: Automatic logging on each conversation interaction, evaluating session history for milestones
 
-**Context Priority System:** Remembered choices → Existing journal entry → No context
+**Context Priority System:** Request context (explicitly provided) → Remembered choices → No context
 
 **Quality Standard:** Apply technical writing style proofreading (objective tone, active voice, precise terminology, clarity, conciseness)
 
@@ -80,6 +80,7 @@ Evaluate session history (not just last message) for milestones. Only write if c
 - Decision made
 - Reusable learning identified
 - Unexpected behavior observed
+- Housekeeping items (non-project administrative, scheduling constraints, HR-related matters)
 
 ### Entry Format Standards
 
@@ -89,7 +90,7 @@ Evaluate session history (not just last message) for milestones. Only write if c
 
 **Notes (Cognitive Layer):**
 - Format: `[Type]` followed by 2-3 sentences MAX
-- Allowed types: `[Insight]`, `[Decision]`, `[Observation]`, `[Hypothesis]`, `[Friction]`, `[Question]`
+- Allowed types: `[Insight]`, `[Decision]`, `[Observation]`, `[Hypothesis]`, `[Friction]`, `[Question]`, `[Housekeeping]`
 - Rules: Do not restate activity, focus on meaning/implications, concise and standalone, no overlap
 
 ### Inference Policy
@@ -128,7 +129,7 @@ When information is incomplete:
 
 **Multi-note:** Allow ONLY if different cognitive types apply (e.g., Insight + Decision), each must stand independently
 
-**Category Selection:** Do not force categories, prefer fewer high-value notes. Priority: Decision > Insight > Friction > Hypothesis > Observation > Question
+**Category Selection:** Do not force categories, prefer fewer high-value notes. Priority: Decision > Insight > Friction > Hypothesis > Observation > Question > Housekeeping
 
 ### Conservative Bias
 
@@ -143,11 +144,45 @@ Only create Notes when confident they add value and will be useful later
 - Only write if criteria is matched
 - Do NOT interrupt workflow or ask questions during autonomous logging
 - Apply conservative bias and produce best-effort logs
-- Use same context priority system as user-initiated logging
+- Use same context priority system as user-initiated logging (request context → remembered choices → no context)
 - Apply technical writing style proofreading
 - Scripts handle automatic timestamp capture
+- **MANDATORY:** When writing logs, indicate source in Devin output: "autonomous" for autonomous logging, "user" for user-initiated, "devin" for Devin's initiative and cognitive reasoning beyond scripted instructions
 
 ## User-Initiated Logging Procedures
+
+### Step 0: Parameter Check
+
+**MANDATORY:** Check if skill was invoked with parameters (entry text, description, or any user input)
+
+**If parameters provided:** Proceed to Step 1 (Determine Target Date)
+
+**If NO parameters provided:**
+- Inform user what the skill can do:
+  - Log activities, meetings, notes, and tasks to your daily journal
+  - Automatically apply technical writing style proofreading
+  - Support autonomous logging during work sessions
+  - Manage project and Jira Epic context for organization
+  - Review existing journal entries
+- Ask user: "Would you like to set a project and Jira Epic for the current session?"
+- If yes: Proceed to Step 1 (Determine Target Date) and continue through context selection (Steps 3-4), then tell user how to log to the journal:
+  - "To log to your journal, you can:"
+  - "• Use natural language: 'log activity completed code review'"
+  - "• Be specific: 'log meeting team standup at 15:30 for 30 minutes'"
+  - "• Add context: 'log note about challenges with project X'"
+  - "• The skill will automatically apply proofreading and manage context"
+  - **FINISH** (do not proceed to do anything else)
+- If no: Ask user what they want to do using ask_user_question with these options:
+  - "Log an activity"
+  - "Log a meeting"
+  - "Add a note"
+  - "Add a task"
+  - "Review today's journal"
+  - "Create new journal entry"
+- Based on user selection, proceed to appropriate step:
+  - Activity/Meeting/Note/Task: Proceed to Step 1 (Determine Target Date) and continue through normal workflow
+  - Review today's journal: Read today's journal file and display contents
+  - Create new journal entry: Proceed to Step 1 (Determine Target Date) with current date
 
 ### Step 1: Determine Target Date
 
@@ -174,8 +209,6 @@ Parse output to extract:
 - Display date (DDD DD MMMM YYYY format)
 - Project/epic context data (between CONTEXT_START and CONTEXT_END)
 
-If file status is EXISTS: Read file to extract last used project and Jira Epic context from most recent Activity Log entry
-
 ### Step 3: Select Project Context
 
 **Priority Check:** If project/epic choices were made in previous ask_user_question during this session, use most recent project choice and skip to Jira Epic selection (or skip if epic also chosen)
@@ -184,8 +217,8 @@ If file status is EXISTS: Read file to extract last used project and Jira Epic c
 - Parse stored context to extract project names (first field of each pipe-delimited line)
 - Display full project list to user
 - Present 4 options using ask_user_question:
-  - Option 1: If existing entry with previous context: "Use same project as last entry: <project name>" else: Top project
-  - Option 2: If Option 1 was "Use same project...": Top project else: Second project
+  - Option 1: Top project
+  - Option 2: Second project
   - Option 3: "No Project" (skips project context)
   - Option 4: "New Project" (ask for name and create folder)
 
@@ -205,8 +238,8 @@ Handle selection:
 - Parse stored context to extract epics for selected project
 - Display full OCTO folder list to user
 - Present 4 options using ask_user_question:
-  - Option 1: If existing entry with previous context: "Use same Jira Epic as last entry: <epic name>" else: Top OCTO folder (or "No Jira Epic" if none exist)
-  - Option 2: If Option 1 was "Use same Jira Epic...": Top OCTO folder else: Second OCTO folder (or "New Jira Epic" if Option 1 was "No Jira Epic")
+  - Option 1: Top OCTO folder (or "No Jira Epic" if none exist)
+  - Option 2: Second OCTO folder (or "New Jira Epic" if Option 1 was "No Jira Epic")
   - Option 3: "No Jira Epic" (only present if OCTO folders exist)
   - Option 4: "New Jira Epic" (ask for reference and create folder)
 
@@ -285,11 +318,18 @@ Handle selection:
 
 **If user does NOT specify date or time:** DO NOT pass these parameters - let scripts automatically capture and use current date/time
 
+**Source indication for audit purposes:**
+- **user**: Explicit user-directed logging (starts with "log task", "log activity", "log meeting", or "log note")
+- **autonomous**: Rule-based automatic logging (follows specific autonomous logging rules for activities and notes, triggered by conversation evaluation matching defined milestones, does not apply to tasks)
+- **devin**: Initiative and cognitive reasoning beyond scripted instructions (when Devin takes initiative based on understanding context, uses cognitive reasoning beyond the skill's scripted rules, example: marking a task as completed because Devin understands the user completed it)
+
+**MANDATORY:** Before calling script, indicate source in Devin output (e.g., "Writing to journal [source: user]...")
+
 **Script calls:**
-- Activity Log: `scripts/log_activity.sh <activity_description> [project] [jira_epic]` (only add [date] [time] if user specified)
-- Meeting Log: `scripts/log_meeting.sh <title> <type> <duration> [project]` (only add [date] [time] if user specified, leave project blank if not project-related)
-- Notes: `scripts/log_note.sh [project] [jira_epic] <summary>` (only add [date] [time] if user specified, leave project/jira_epic blank if not selected)
-- Tasks: `scripts/log_task.sh <task_description> [project] [target_date]` (only add [date] if user specified specific date, leave project blank if not selected, leave target_date blank if current date)
+- Activity Log: `scripts/log_activity.sh [date] [time] <activity_description> [project] [jira_epic]`
+- Meeting Log: `scripts/log_meeting.sh [date] [time] <title> <type> <duration> [project]`
+- Notes: `scripts/log_note.sh [date] [time] [project] [jira_epic] <summary>`
+- Tasks: `scripts/log_task.sh [date] <task_description> [project] [target_date]`
 
 Scripts handle proper formatting, file placement, and timestamp capture
 
@@ -311,14 +351,17 @@ Scripts handle proper formatting, file placement, and timestamp capture
 
 ## Example Workflows
 
+**User:** "skill daily_journal" (no parameters)
+**You:** Check parameters (none) → inform user what skill can do → ask about setting project/Jira Epic → if yes, set context and tell how to log → if no, ask what to do and proceed
+
 **User:** "Create a daily journal entry"
-**You:** Validate journal → extract context → present project/epic options → ask entry type → ask content → proofread → call script
+**You:** Validate journal → present project/epic options → ask entry type → ask content → proofread → call script
 
 **User:** "skill journal Updated journal skill for devin.ai"
-**You:** Validate journal → extract context → present project/epic options → use provided text → proofread → call log_activity.sh
+**You:** Validate journal → present project/epic options → use provided text → proofread → call log_activity.sh
 
 **User:** "Add another activity to my journal"
-**You:** Validate journal → extract last used context → present project/epic options (with "Use same") → ask content → proofread → call log_activity.sh
+**You:** Validate journal → present project/epic options → ask content → proofread → call log_activity.sh
 
 **User:** "Add a meeting to my journal"
 **You:** Validate journal → present project/epic options → use parsed meeting details if available → proofread → call log_meeting.sh

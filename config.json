@@ -2,7 +2,7 @@
   "shell": {
     "setup_complete": true
   },
-  "theme_mode": "16color",
+  "theme_mode": "dark",
   "agent": {
     "model": "swe-1-6"
   },

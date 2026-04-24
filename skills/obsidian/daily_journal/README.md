@@ -28,7 +28,7 @@ Create and manage daily journal entries in your Obsidian vault with project and 
 
 - **Natural language parsing**: Extracts information from natural language requests (e.g., "log meeting OIL and Development Team meeting at 15:30 for 30 minutes no project") to minimize prompts
 - **Autonomous activity logging**: Automatically evaluates conversation progress on each interaction and logs significant work achievements without explicit instruction
-- **Intelligent context management**: Priority system for context selection (remembered choices, existing journal entry)
+- **Intelligent context management**: Priority system for context selection (request context, remembered choices)
 - **Automatic quality control**: Technical writing style proofreading for all journal entries, including spelling, grammar, sentence simplification, objective tone, active voice, and precise terminology
 - **Chronological ordering**: Activities and meetings are automatically sorted by timestamp, supporting backdating
 - **Project organization**: Associate entries with projects from your Obsidian vault
@@ -130,13 +130,24 @@ Each project can contain multiple OCTO (Jira Epic) folders for context tracking.
 
 ### Basic Usage
 
+**Invoke skill without parameters:**
+```
+/daily_journal
+```
+
+The skill will:
+1. Inform you what it can do (log activities, meetings, notes, tasks, review journal, autonomous logging)
+2. Ask if you would like to set a project and Jira Epic for the current session
+3. If yes: Set context, then tell you how to log to the journal and finish
+4. If no: Ask what you want to do, proceed with that action
+
 **Log an activity with automatic context:**
 ```
 /daily_journal log activity Completed code review
 ```
 
 The skill will:
-1. Prompt for project selection (with context from last entry)
+1. Prompt for project selection
 2. Prompt for Jira Epic selection (if project selected)
 3. Insert the activity in chronological order
 
@@ -192,8 +203,8 @@ The skill will insert the entry at the correct chronological position based on t
 ### Context Reuse
 
 The skill uses a priority system for context determination:
-1. **Remembered choices**: Reuses project/epic choices from previous selections during the same session
-2. **Existing journal entry**: Extracts context from the current day's journal entry if available
+1. **Request context**: Uses project/epic explicitly provided in the natural language request
+2. **Remembered choices**: Reuses project/epic choices from previous selections during the same session
 
 This makes it efficient to log multiple entries without repeatedly selecting the same context.
 
@@ -201,24 +212,28 @@ This makes it efficient to log multiple entries without repeatedly selecting the
 
 The skill follows this streamlined process with clear separation of concerns:
 
-1. **User invokes skill**: `/daily_journal log activity <description>` or autonomous logging (evaluates conversation progress on each interaction)
-2. **Skill (Intent Assessment & Context Selection)**:
+1. **User invokes skill**: `/daily_journal log activity <description>` or `/daily_journal` (no parameters) or autonomous logging (evaluates conversation progress on each interaction)
+2. **Skill (Parameter Check)**:
+   - If parameters provided: Proceed to intent assessment
+   - If NO parameters: Inform user what skill can do, ask if they want to set project/Jira Epic for session
+     - If yes: Set context, tell user how to log to journal, finish
+     - If no: Ask what they want to do, proceed with that action
+3. **Skill (Intent Assessment & Context Selection)**:
    - Determines target date (current date or specified date)
-   - Applies context priority system (remembered choices → existing journal)
+   - Applies context priority system (request context → remembered choices → no context)
    - Changes to skill directory for script execution
    - Calls `validate_journal.sh` to initialize journal and get project/epic context
-   - If journal exists, extracts last used context for efficiency
    - Displays available projects and prompts for selection (if no context from priority system)
    - Displays available Jira Epics for selected project and prompts for selection (if no context from priority system)
    - Gets entry content (from command argument or prompts user)
    - Applies technical writing style proofreading, including spelling, grammar, sentence simplification, objective tone, active voice, precise terminology, and clarity
-3. **Script Execution (Technical Operations)**:
+4. **Script Execution (Technical Operations)**:
    - Calls appropriate logging script (`log_activity.sh`, `log_meeting.sh`, `log_note.sh`, or `log_task.sh`)
    - Scripts handle automatic date/time capture if not provided
    - Scripts handle file operations and content insertion
    - Chronological ordering handled for activities and meetings
    - Tasks grouped by project automatically
-4. **Result**: Journal entry created or updated in Obsidian vault
+5. **Result**: Journal entry created or updated in Obsidian vault
 
 **Key Separation of Concerns:**
 - **Skill**: User interaction, context selection, decision making, workflow orchestration, quality validation
@@ -229,8 +244,9 @@ The skill follows this streamlined process with clear separation of concerns:
 
 - **Natural language parsing**: Extracts information from natural language requests to minimize prompts
 - **Autonomous activity logging**: Evaluates conversation progress on each interaction and automatically logs significant work achievements
-- **Context priority system**: Remembered choices and existing journal context
+- **Context priority system**: Request context and remembered choices
 - **Automatic quality control**: Technical writing style proofreading for all entries, including spelling, grammar, sentence simplification, objective tone, active voice, and precise terminology
+- **Audit tracking**: Source indication in Devin output (user, autonomous, intuition) for all journal entries
 - **Chronological ordering**: Activities and meetings automatically sorted by timestamp
 - **Context reuse**: Intelligent context management reduces repetitive selections
 - **Project grouping**: Tasks automatically organized by project
@@ -241,6 +257,16 @@ The skill follows this streamlined process with clear separation of concerns:
 - **Automatic timestamp handling**: Scripts capture current date/time when not provided
 
 ## Advanced Usage
+
+### Audit Tracking
+
+For audit purposes, the skill indicates the source of each journal entry in the Devin output before writing to the file:
+
+- **user**: Entry created due to explicit user direction (user-initiated logging)
+- **autonomous**: Entry created by the autonomous logging system based on conversation evaluation
+- **intuition**: Entry created when Devin decides to write to the log file on its own, not because of user direction or autonomous logging success
+
+The source is indicated in the Devin output (e.g., "Writing to journal [source: user]...") but is not written to the actual journal files, keeping the log entries clean while providing audit trail visibility.
 
 ### Autonomous Activity Logging
 
@@ -291,8 +317,7 @@ When you invoke the skill, it follows this detailed process:
 
 **Step 3: Context Selection**
 - Parses project context and displays available projects
-- If journal exists, extracts last used project and Jira Epic
-- Presents 4 options for project selection (with context-aware suggestions)
+- Presents 4 options for project selection
 - If project selected, presents Jira Epic options for that project
 
 **Step 4: Content Creation**
@@ -434,7 +459,7 @@ Verify that the `DAILY_JOURNAL_TEMPLATE` file exists in your Templates folder as
 Make sure your time format matches the configured `TIME_FORMAT` (default: HH:MM in 24-hour format). The skill compares timestamps as strings for ordering.
 
 ### "Context not being reused"
-The skill uses a priority system for context: remembered choices → existing journal entry. If context isn't being reused as expected, check that the journal entry has the expected context.
+The skill uses a priority system for context: request context → remembered choices. If context isn't being reused as expected, check that project/epic was either explicitly provided in the request or selected in the current session.
 
 ## License
 

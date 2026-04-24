@@ -57,12 +57,14 @@ if [ -n "$PROJECT" ]; then
     # Check if there are existing tasks for this project
     if grep -q "\\[ \\] $PROJECT:" "$ENTRY_FILE"; then
         # Find the last task for this project and insert after it
-        sed -i "/\\[ \\] $PROJECT:/a\\$TASK_LINE" "$ENTRY_FILE"
+        LAST_LINE=$(grep -n "\\[ \\] $PROJECT:" "$ENTRY_FILE" | tail -1 | cut -d: -f1)
+        sed -i "${LAST_LINE}a\\$TASK_LINE" "$ENTRY_FILE"
     else
         # Check if there are tasks with other projects
         if grep -q "^- \\[ \\].*:" "$ENTRY_FILE"; then
             # Find the last task with any project and insert after it
-            sed -i "/^- \\[ \\].*:/a\\$TASK_LINE" "$ENTRY_FILE"
+            LAST_LINE=$(grep -n "^- \\[ \\].*:" "$ENTRY_FILE" | tail -1 | cut -d: -f1)
+            sed -i "${LAST_LINE}a\\$TASK_LINE" "$ENTRY_FILE"
         else
             # Insert at the beginning of the Tasks section (after header)
             sed -i "/^## $SECTION_TASKS$/a\\$TASK_LINE" "$ENTRY_FILE"
@@ -72,7 +74,8 @@ else
     # No project - add to the bottom of the task list
     # Find the last task line and insert after it
     if grep -q "^- \\[ \\]" "$ENTRY_FILE"; then
-        sed -i "/^- \\[ \\]/a\\$TASK_LINE" "$ENTRY_FILE"
+        LAST_LINE=$(grep -n "^- \\[ \\]" "$ENTRY_FILE" | tail -1 | cut -d: -f1)
+        sed -i "${LAST_LINE}a\\$TASK_LINE" "$ENTRY_FILE"
     else
         # Insert at the beginning of the Tasks section (after header)
         sed -i "/^## $SECTION_TASKS$/a\\$TASK_LINE" "$ENTRY_FILE"
