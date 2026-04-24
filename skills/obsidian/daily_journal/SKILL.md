@@ -1,6 +1,6 @@
 ---
 name: daily_journal
-description: Create a daily journal entry in Obsidian vault
+description: Create and manage daily journal entries in Obsidian vault with user-initiated and autonomous logging
 argument-hint: "[entry text]"
 allowed-tools:
   - write
@@ -9,238 +9,328 @@ allowed-tools:
   - find_file_by_name
   - ask_user_question
 triggers:
+  - model
   - user
 ---
 
 You are an expert at helping users create daily journal entries in their Obsidian vault. Your task is to create or update a journal entry for the current day using the current date and time.
 
-## Architecture
+## Quick Reference
 
-This skill uses a separation of concerns:
-- **Intelligence Layer (Skill)**: Handles decision making, user interaction, context selection, and orchestrates the workflow
-- **System Operations Layer (Scripts)**: Handles file system queries and file writing operations
+**Autonomous Logging Decision Tree:**
+- TRIGGER: Evaluate for autonomous logging on each conversation interaction
+- Evaluate session history (not just last message) for milestones
+- If activity milestone matched → Log Activity (format: `[Time] Action → Outcome`)
+- If note milestone matched → Log Note ONLY if clear cognitive value (format: `[Type]` + 2-3 sentences)
+- When uncertain → Log Activity ONLY
+- Only write if criteria is matched
 
-The skill is responsible for:
-- Date/time capture and parsing
-- User interaction and context selection
-- Decision logic for project/Jira Epic selection
-- Orchestrating the workflow and calling appropriate scripts
+**Critical Rules:**
+- MUST: Parse natural language FIRST before asking questions
+- MUST: Apply technical writing style proofreading (objective, active voice, precise, concise)
+- MUST: Only pass date/time to scripts if user specified them
+- MUST: Change to skill directory before calling scripts: `cd ~/.config/devin/skills/obsidian/daily_journal`
 
-The scripts are responsible for:
-- Querying the file system for projects and Jira Epics
-- Checking if journal entries exist
-- Creating new journal entries with templates
-- Writing specific entry types (activity, meeting, note, task) to journal files
+**Error Handling:**
+- If script fails: Check directory change, validate file paths, verify config.sh exists
+- If context extraction fails: Proceed with manual project/epic selection
+- If template not found: Inform user and ask to verify config.sh TEMPLATES_FOLDER path
+- If journal file creation fails: Check permissions on vault path
 
-## Available Scripts
+**Context Priority:** Remembered choices → Existing journal entry → No context
 
-All scripts are located in the `scripts/` directory within the skill and are sourced from `config.sh` for configuration.
+**Entry Format Quick Guide:**
+- Activities: `[Time] Action → Outcome (Context)`
+- Notes: `[Type]` + 2-3 sentences
+- Meetings: `[Time] Title | type: Type | duration: Duration | project: Project`
+- Tasks: `- [ ] Project: Task` or `- [ ] Task`
 
-### Query & Setup Scripts
+## Core Principles
 
-- **validate_journal.sh**: Validates and prepares the daily journal file, then returns context data
-  - Usage: `scripts/validate_journal.sh [target_date]` (execute from skill directory)
-  - If target_date is provided in YYYY-MM-DD format, uses that date
-  - Otherwise, captures current date and time
-  - Combines multiple operations in one call:
-    1. Captures current date and time (or uses provided date)
-    2. Checks if daily journal file exists for the target date
-    3. Creates file from template if it doesn't exist (reads template from Obsidian vault)
-    4. Gets all projects and their associated OCTO epics
-  - Returns structured output:
-    ```
-    STATUS:CREATED or STATUS:EXISTS
-    FILE:/path/to/journal/file.md
-    DATE:YYYY-MM-DD
-    TIME:HH:MM
-    DISPLAY_DATE:Mon 20 April 2026
-    CONTEXT_START
-    ProjectName|Epic1|Epic2|Epic3...
-    CONTEXT_END
-    ```
-  - The skill parses this output to get file status, path, date/time, and project/epic context
-  - Template is read from: `$OBSIDIAN_VAULT_PATH/$TEMPLATES_FOLDER/$DAILY_JOURNAL_TEMPLATE.md`
+**Architecture:** Separation of concerns between intelligence layer (skill) and system operations layer (scripts)
 
-### Logging Scripts
+**Two Operating Modes:**
+- User-initiated: Explicit user requests to log activities, meetings, notes, or tasks
+- Autonomous: Automatic logging on each conversation interaction, evaluating session history for milestones
 
-- **log_activity.sh**: Logs an activity to the Activity Log section
-  - Usage: `log_activity.sh [date] [time] <activity_description> [project] [jira_epic]`
-  - If date/time not provided, script automatically captures current date/time
-  - Returns: "LOGGED:<file_path>"
+**Context Priority System:** Remembered choices → Existing journal entry → No context
 
-- **log_meeting.sh**: Logs a meeting to the Meetings Log section
-  - Usage: `log_meeting.sh [date] [time] <title> <type> <duration> [project]`
-  - If date/time not provided, script automatically captures current date/time
-  - Returns: "LOGGED:<file_path>"
+**Quality Standard:** Apply technical writing style proofreading (objective tone, active voice, precise terminology, clarity, conciseness)
 
-- **log_note.sh**: Logs a daily note to the Notes section
-  - Usage: `log_note.sh [date] [time] [project] [jira_epic] <summary>`
-  - If date/time not provided, script automatically captures current date/time
-  - Returns: "LOGGED:<file_path>"
+**Date/Time Handling:** Scripts automatically capture current date/time if not provided
 
-- **log_task.sh**: Logs a task to the Tasks section
-  - Usage: `log_task.sh [date] <task_description> [project] [target_date]`
-  - If date not provided, script automatically captures current date
-  - Returns: "LOGGED:<file_path>"
-  - Note: Automatically groups tasks by project
+## Autonomous Logging Rules
 
-## Instructions
+### Trigger Conditions
 
-This skill operates in one mode:
-- **User-initiated logging**: When explicitly asked to log activities, meetings, notes, or tasks
+TRIGGER: Evaluate for autonomous logging on each conversation interaction
 
-1. **Determine target date**:
-   - Check if a specific date was mentioned in the user's request (e.g., "Monday", "tomorrow", "2026-04-20")
-   - If a specific date is mentioned: convert it to YYYY-MM-DD format
-   - If no date is specified: call scripts/validate_journal.sh without parameters (it will capture current date)
-   - For tasks with dates, add the target date information in the task description
-   - Note: The log scripts handle timestamp capture automatically if no date/time is provided
+Evaluate session history (not just last message) for milestones. Only write if criteria is matched:
 
-2. **Initialize journal and get context**:
-   - **CRITICAL**: First change directory to the skill location using: `cd ~/.config/devin/skills/obsidian/daily_journal`
-   - Then call the `scripts/validate_journal.sh [target_date]` script to:
-     - Capture current date and time (or use provided target date)
-     - Check if the daily journal file exists for the target date
-     - Create the file from template if it doesn't exist
-     - Get all projects and their associated OCTO epics
-   - Parse the script output to extract:
-     - File status (CREATED or EXISTS)
-     - File path
-     - Date (YYYY-MM-DD format)
-     - Time (HH:MM format)
-     - Display date (DDD DD MMMM YYYY format, e.g., "Mon 20 April 2026")
-     - Project/epic context data (between CONTEXT_START and CONTEXT_END)
-   - Store the date and time for use in log entries
-   - If file status is EXISTS, read the existing file to extract the last used project and Jira Epic context from the most recent Activity Log entry
-   - Store the context data for later use in project and epic selection
+**Activity Milestones (MUST LOG):**
+- Completed work or tasks
+- Debugging or problem-solving progress
+- System/tool usage and configuration
+- Meaningful actions taken
+- Files modified or code changes
 
-3. **Select project context**:
-   - **Remembered choices check**: Check if project/epic choices were made in a previous ask_user_question instance during this session. If yes, use the most recent project choice and skip to Jira Epic selection (or skip if epic was also chosen).
-   - If no context from remembered choices, proceed with user selection:
-   - Parse the stored context output to extract project names (first field of each pipe-delimited line)
-   - Display the full list of available project names to the user (only project names, not epic details)
-   - Determine the 4 options to present:
-     - **Option 1**: If working with existing daily entry with previous context: "Use same project as last entry: <project name>"
-                If working with new entry or no previous context: Top project from the list
-     - **Option 2**: If Option 1 was "Use same project...": Top project from the list
-                If Option 1 was top project: Second project from the list
-     - **Option 3**: "No Project" - if selected, project context will not be used in the rest of the task
-     - **Option 4**: "New Project" - if selected, ask user for new project name and create the project folder
-   - Present these 4 options using ask_user_question tool (tool automatically provides "Other" option)
-   - Handle user selection:
-     - If user selects an existing project: use that as the project context
-     - If user selects "No Project": skip project context in the rest of the task (leave project field blank)
-     - If user selects "New Project": ask user for the new project name, then create the project folder in the OIL R&D Journal directory
-     - If user selects "Other": try to match the entered name to an existing project; if found, use it; if not found, use the entered name but do NOT create a new project folder
+**Note Milestones (LOG ONLY if clear cognitive value):**
+- Insight was formed
+- Non-trivial problem solved
+- Decision made
+- Reusable learning identified
+- Unexpected behavior observed
 
-4. **Select Jira Epic context**:
-   - If project context was skipped (user selected "No Project"): skip Jira Epic selection entirely (leave Jira field blank)
-   - **Remembered choices check**: If project context was selected, check if project/epic choices were made in a previous ask_user_question instance during this session. If yes, use the most recent epic choice and skip user selection.
-   - If no context from remembered choices, proceed with user selection:
-   - Parse the stored context output from step 2 to extract epics for the selected project
-     - Find the line matching the selected project name
-     - Extract fields after the first (split by pipe) to get the list of epics
-     - If the line has no pipe delimiters, the project has no epics
-   - Display the full list of available OCTO folders to the user
-   - Determine the 4 options to present:
-     - **Option 1**: If working with existing daily entry with previous context: "Use same Jira Epic as last entry: <epic name>"
-                If working with new entry or no previous context: Top OCTO folder from the list
-                If no OCTO folders exist: "No Jira Epic"
-     - **Option 2**: If Option 1 was "Use same Jira Epic...": Top OCTO folder from the list
-                If Option 1 was top OCTO folder: Second OCTO folder from the list
-                If Option 1 was "No Jira Epic" (no OCTO folders): "New Jira Epic"
-                If OCTO folders exist but Option 1 was not "Use same...": Second OCTO folder from the list
-     - **Option 3**: "No Jira Epic" - if selected, Jira Epic context will not be used in the rest of the task (only present if OCTO folders exist)
-     - **Option 4**: "New Jira Epic" - if selected, ask user for new Jira Epic reference and create the folder under the project directory
-   - Special case for no OCTO folders: Present only 2 options - "No Jira Epic" and "New Jira Epic" (satisfies 2-4 option requirement)
-   - Present these options using ask_user_question tool (tool automatically provides "Other" option)
-   - Handle user selection:
-     - If user selects an existing OCTO folder: use that as the Jira Epic context
-     - If user selects "No Jira Epic": skip Jira Epic context in the rest of the task (leave Jira field blank)
-     - If user selects "New Jira Epic": ask user for the new Jira Epic reference, create the folder under the project directory, and use it in the entry
-     - If user selects "Other": try to match the entered name to an existing OCTO folder; if found, use it; if not found, use the entered reference but do NOT create a new folder
+### Entry Format Standards
 
-5. **Get entry content**:
-   - **Parse natural language request first**: Before asking questions, parse the user's original request to extract available information:
-     - Entry type: Look for "log activity", "log meeting", "log note", "log task", or similar phrases
-     - For meetings: Extract title, time (e.g., "at 15:30", "at 3:30 PM"), duration (e.g., "for 30 minutes", "1 hour"), and meeting type if specified
-     - For tasks: Extract task description, target date (e.g., "for Monday", "tomorrow"), and project context if specified (e.g., "no project")
-     - For activities: Extract activity description and time if specified
-     - For notes: Extract topic/summary and time if specified
-   - **Only ask for missing information**: After parsing, only ask the user for information that was not provided in the request
-   - Check if entry text was provided as a command argument
-   - If entry text was provided and entry type is clear: use it directly for the entry
-   - If no entry text was provided or the request is ambiguous (e.g., "log it"), ask the user what type of entry they want to add using ask_user_question with options: "Activity", "Meeting", "Note", or "Task"
-   - For Activity entries:
-     - Use the parsed activity description and time if available
-     - If not parsed, ask for the entry description (project and Jira Epic already selected)
-     - If user specifies a time, pass it to the script; otherwise let the script capture current time
-   - For Meeting entries:
-     - Use the parsed title, time, duration, and type if available
-     - Only ask for information that was not provided in the original request
-     - If meeting type is not specified, ask for it or use a sensible default based on the title
-     - If meeting type is not project-related, leave project field blank
-     - Use the format: `[HH:MM] <title> | type: <type> | duration: <duration> | project: <project>`
-   - For Daily Notes entries:
-     - Use the parsed time, project context, Jira Epic context, and topic if available
-     - Only ask for information that was not provided in the original request
-     - Generate a 2-3 sentence summary based on the user's request context if sufficient information is provided
-     - Only ask for a summary if the request is truly ambiguous or lacks sufficient context
-     - If the user provides a clear topic (e.g., "log a note on the challenges faced completing this skill"), generate a reasonable summary based on that topic and the session context
-     - Daily Notes are for diary-style entries: thoughts, observations, challenges, insights (not technical notes)
-     - Use the format: `[HH:MM] project: <project> | Jira Epic: <Jira Epic>` followed by the summary on the next line
-     - Insert a blank line between Notes entries
-   - For Task entries:
-     - Use the parsed task description, target date, and project context if available
-     - Only ask for project context if not specified in the request (e.g., if "no project" was mentioned, skip the question)
-     - Check if a specific date was mentioned in the original request
-     - If a future date is specified: use that date for the file naming and add target date to task description
-     - If no date specified: use current date and standard format
-     - If project is left blank or not applicable, use the format: `- [ ] <task>`
-     - If project is specified and current date: use the format: `- [ ] <project>: <task>`
-     - If project is specified and future date: use the format: `- [ ] <project>: <task> (for <date>)`
-   - Keep tasks for the same project together in the list
-   - For new entries: guide them through the daily template structure
-   - For existing entries: ask what they'd like to add to today's entry
-   - **MANDATORY**: After getting the entry content, perform proofreading before proceeding to step 6. Review the entry content (activity description, meeting title, note summary, or task description) and automatically correct minor proofreading issues while preserving the original meaning and tone. Additionally, check for sentence complexity and simplify descriptions to make them more concise and easier to read when possible.
+**Activity Log (Execution Layer):**
+- Format: `[Time] Action → Outcome (Context/Artifact)`
+- Rules: Past tense, one entry per meaningful action, include tools/systems, no reasoning/speculation, concise and verifiable
 
-6. **Create or update the journal entry**:
-   - **IMPORTANT**: Only pass date/time parameters to scripts if the user specifically provided them in their request
-   - If the user does NOT specify a date or time, DO NOT pass these parameters - let the scripts automatically capture and use the current date/time
-   - The scripts have built-in date/time capture logic and will use current date/time if not provided
-   - For Activity Log entries: call `scripts/log_activity.sh <activity_description> [project] [jira_epic]` (only add [date] [time] if user specified them)
-   - For Meeting Log entries: call `scripts/log_meeting.sh <title> <type> <duration> [project]` (only add [date] [time] if user specified them, leave project blank if not project-related)
-   - For Daily Notes entries: call `scripts/log_note.sh [project] [jira_epic] <summary>` (only add [date] [time] if user specified them, leave project/jira_epic blank if not selected)
-   - For Tasks entries: call `scripts/log_task.sh <task_description> [project] [target_date]` (only add [date] if user specified a specific date, leave project blank if not selected, leave target_date blank if current date)
-   - The scripts handle proper formatting, file placement, and timestamp capture
+**Notes (Cognitive Layer):**
+- Format: `[Type]` followed by 2-3 sentences MAX
+- Allowed types: `[Insight]`, `[Decision]`, `[Observation]`, `[Hypothesis]`, `[Friction]`, `[Question]`
+- Rules: Do not restate activity, focus on meaning/implications, concise and standalone, no overlap
 
-7. **Confirm creation**:
-   - Tell the user the journal entry has been created or updated
-   - Provide the file path
-   - Offer to help them review or edit the entry
+### Inference Policy
 
-## Example Usage
+When information is incomplete:
+- Time → Use current time
+- Action → Extract from verbs
+- Outcome → Infer conservatively (use neutral phrasing: "→ Investigated issue", "→ Partial progress")
+- Context → Infer tools/systems from keywords
 
-User: "Create a daily journal entry"
-You: Check if date mentioned → if not, call `scripts/validate_journal.sh` (captures current date/time) → if yes, convert date and call `scripts/validate_journal.sh` <target_date>` → parse output to extract file status, path, date, time, and project/epic data → if file exists, read it to extract last used context → parse context data to extract project names → display full project list → present 4 options (top project/second project/No Project/New Project) + Other → user selects project → handle selection (create folder if New Project) → if No Project selected, skip Jira Epic selection → if project selected: parse stored context to extract epics for selected project → display full OCTO list → present 4 options (top OCTO/second OCTO/No Jira Epic/New Jira Epic) + Other → user selects Jira Epic → handle selection → ask for entry type (Activity/Meeting/Note/Task) → ask for content → validate and refine content for proofreading issues → call appropriate log script (scripts will capture current date/time if not provided)
+**MANDATORY: Do NOT fabricate unknown outcomes**
 
-User: "skill journal Updated journal skill for devin.ai"
-You: Call `scripts/validate_journal.sh` (captures current date/time) → parse output to extract file status, path, date, time, and project/epic data → parse context data to extract project names → display full project list → present 4 options (top project/second project/No Project/New Project) + Other → user selects project → handle selection (create folder if New Project) → if No Project selected, skip Jira Epic selection → if project selected: parse stored context to extract epics for selected project → display full OCTO list → present 4 options (top OCTO/second OCTO/No Jira Epic/New Jira Epic) + Other → user selects Jira Epic → handle selection → use provided entry text "Updated journal skill for devin.ai" → validate and refine content for proofreading issues → call `scripts/log_activity.sh` (script will capture current date/time if not provided)
+### Dual Logging Policy
 
-User: "Add another activity to my journal"
-You: Call `scripts/validate_journal.sh` (captures current date/time) → parse output to extract file status, path, date, time, and project/epic data → if file exists, read it to extract last used context → parse context data to extract project names → display full project list → present 4 options (Use same project/top project/No Project/New Project) + Other → user selects project → handle selection (create folder if New Project) → if No Project selected, skip Jira Epic selection → if project selected: parse stored context to extract epics for selected project → display full OCTO list → present 4 options (Use same Jira Epic/top OCTO/No Jira Epic/New Jira Epic) + Other → user selects Jira Epic → handle selection → ask for entry content → validate and refine content for proofreading issues → call `scripts/log_activity.sh` (script will capture current date/time if not provided)
+**Principle:** Only create Notes when there is clear cognitive value
 
-User: "Add a meeting to my journal"
-You: Call `scripts/validate_journal.sh` (captures current date/time) → parse output to extract file status, path, date, time, and project/epic data → parse context data to extract project names → display full project list → present 4 options (top project/second project/No Project/New Project) + Other → user selects project → handle selection (create folder if New Project, skip project context if No Project) → if No Project selected, skip Jira Epic selection → if project selected: parse stored context to extract epics for selected project → display full OCTO list → present 4 options (top OCTO/second OCTO/No Jira Epic/New Jira Epic) + Other → user selects Jira Epic → handle selection → use parsed meeting time/title/duration if available, only ask for missing information → validate and refine content for proofreading issues → call `scripts/log_meeting.sh` with appropriate parameters (leave project blank if No Project selected, script will capture current date/time if not provided)
+**Promote Activity → Note if:**
+- Insight was formed
+- Non-trivial problem solved
+- Decision made
+- Reusable learning identified
+- Unexpected behavior observed
 
-User: "log meeting OIL and Development Team meeting at 15:30 for 30 minutes no project"
-You: Parse request to extract: entry type (meeting), title (OIL and Development Team meeting), time (15:30), duration (30 minutes), project (no project) → Call `scripts/validate_journal.sh` (captures current date/time) → parse output to extract file status, path, date, time, and project/epic data → skip project selection (user specified "no project") → skip Jira Epic selection (no project) → only ask for meeting type (not provided in request) → validate and refine content for proofreading issues → call `scripts/log_meeting.sh` with extracted parameters (leave project blank, script will capture current date/time if not provided)
+**Do NOT promote if:**
+- Routine work
+- Mechanical execution
+- No new understanding
 
-User: "Add a note to my journal"
-You: Call `scripts/validate_journal.sh` (captures current date/time) → parse output to extract file status, path, date, time, and project/epic data → parse context data to extract project names → display full project list → present 4 options (top project/second project/No Project/New Project) + Other → user selects project → handle selection (create folder if New Project, skip project context if No Project) → if No Project selected, skip Jira Epic selection → if project selected: parse stored context to extract epics for selected project → display full OCTO list → present 4 options (top OCTO/second OCTO/No Jira Epic/New Jira Epic) + Other → user selects Jira Epic → handle selection → use parsed time/topic if available, only ask for missing information → validate and refine content for proofreading issues → call `scripts/log_note.sh` with appropriate parameters (leave project/jira_epic blank if No Project or No Jira Epic selected, script will capture current date/time if not provided)
+**DEFAULT:** Activity ONLY
 
-User: "Add a task to my journal"
-You: Call `scripts/validate_journal.sh` (captures current date/time) → parse output to extract file status, path, date, time, and project/epic data → parse context data to extract project names → display full project list → present 4 options (top project/second project/No Project/New Project) + Other → user selects project → handle selection (create folder if New Project, skip project context if No Project) → if No Project selected, skip Jira Epic selection → if project selected: parse stored context to extract epics for selected project → display full OCTO list → present 4 options (top OCTO/second OCTO/No Jira Epic/New Jira Epic) + Other → user selects Jira Epic → handle selection → use parsed task description if available, only ask if not parsed → validate and refine content for proofreading issues → call `scripts/log_task.sh` with appropriate parameters (leave project blank if No Project selected, script will capture current date if not provided)
+### Note Quality Rules
 
-User: "Create a task for Monday to update my VDI linux system"
-You: Parse date from request ("Monday") → calculate target date (2026-04-20) → call `scripts/validate_journal.sh 2026-04-20` → parse output to extract file status, path, date, time, and project/epic data → parse context data to extract project names → display full project list → present 4 options (top project/second project/No Project/New Project) + Other → user selects project → handle selection (create folder if New Project, skip project context if No Project) → if No Project selected, skip Jira Epic selection → if project selected: parse stored context to extract epics for selected project → display full OCTO list → present 4 options (top OCTO/second OCTO/No Jira Epic/New Jira Epic) + Other → user selects Jira Epic → handle selection → use parsed task description if available, only ask if not parsed → validate and refine content for proofreading issues → call `scripts/log_task.sh` with target date parameter (script handles task formatting and grouping, will capture current date if not provided)
+**De-duplication (MANDATORY):** Before finalizing, ask "Do any notes repeat meaning/context?" If YES, merge
+
+**Aggregation:** Avoid fragmented notes, prefer one higher-quality note when insight matures
+
+**Multi-note:** Allow ONLY if different cognitive types apply (e.g., Insight + Decision), each must stand independently
+
+**Category Selection:** Do not force categories, prefer fewer high-value notes. Priority: Decision > Insight > Friction > Hypothesis > Observation > Question
+
+### Conservative Bias
+
+**RULE:** When uncertain, log Activity ONLY
+
+Only create Notes when confident they add value and will be useful later
+
+### Workflow Rules
+
+- TRIGGER: Evaluate for autonomous logging on each conversation interaction
+- Evaluate session history (not just last message) for milestones
+- Only write if criteria is matched
+- Do NOT interrupt workflow or ask questions during autonomous logging
+- Apply conservative bias and produce best-effort logs
+- Use same context priority system as user-initiated logging
+- Apply technical writing style proofreading
+- Scripts handle automatic timestamp capture
+
+## User-Initiated Logging Procedures
+
+### Step 1: Determine Target Date
+
+- Check if specific date mentioned (e.g., "Monday", "tomorrow", "2026-04-20")
+- If date mentioned: Convert to YYYY-MM-DD format
+- If no date: Call `scripts/validate_journal.sh` without parameters (captures current date)
+- For tasks with dates: Add target date to task description
+
+### Step 2: Initialize Journal and Get Context
+
+**CRITICAL:** First change directory: `cd ~/.config/devin/skills/obsidian/daily_journal`
+
+Call `scripts/validate_journal.sh [target_date]` to:
+- Capture current date/time (or use provided target date)
+- Check if daily journal file exists for target date
+- Create file from template if it doesn't exist
+- Get all projects and their associated OCTO epics
+
+Parse output to extract:
+- File status (CREATED or EXISTS)
+- File path
+- Date (YYYY-MM-DD format)
+- Time (HH:MM format)
+- Display date (DDD DD MMMM YYYY format)
+- Project/epic context data (between CONTEXT_START and CONTEXT_END)
+
+If file status is EXISTS: Read file to extract last used project and Jira Epic context from most recent Activity Log entry
+
+### Step 3: Select Project Context
+
+**Priority Check:** If project/epic choices were made in previous ask_user_question during this session, use most recent project choice and skip to Jira Epic selection (or skip if epic also chosen)
+
+**If no context from remembered choices:**
+- Parse stored context to extract project names (first field of each pipe-delimited line)
+- Display full project list to user
+- Present 4 options using ask_user_question:
+  - Option 1: If existing entry with previous context: "Use same project as last entry: <project name>" else: Top project
+  - Option 2: If Option 1 was "Use same project...": Top project else: Second project
+  - Option 3: "No Project" (skips project context)
+  - Option 4: "New Project" (ask for name and create folder)
+
+Handle selection:
+- Existing project: Use as project context
+- "No Project": Skip project context (leave blank)
+- "New Project": Ask for name, create folder in OIL R&D Journal directory
+- "Other": Try to match to existing project; if found use it, if not use entered name but do NOT create folder
+
+### Step 4: Select Jira Epic Context
+
+- If project context skipped ("No Project"): Skip Jira Epic selection entirely
+
+**Priority Check:** If project context selected and project/epic choices were made in previous ask_user_question during this session, use most recent epic choice and skip user selection
+
+**If no context from remembered choices:**
+- Parse stored context to extract epics for selected project
+- Display full OCTO folder list to user
+- Present 4 options using ask_user_question:
+  - Option 1: If existing entry with previous context: "Use same Jira Epic as last entry: <epic name>" else: Top OCTO folder (or "No Jira Epic" if none exist)
+  - Option 2: If Option 1 was "Use same Jira Epic...": Top OCTO folder else: Second OCTO folder (or "New Jira Epic" if Option 1 was "No Jira Epic")
+  - Option 3: "No Jira Epic" (only present if OCTO folders exist)
+  - Option 4: "New Jira Epic" (ask for reference and create folder)
+
+**Special case:** No OCTO folders exist → Present only 2 options: "No Jira Epic" and "New Jira Epic"
+
+Handle selection:
+- Existing OCTO folder: Use as Jira Epic context
+- "No Jira Epic": Skip Jira Epic context (leave blank)
+- "New Jira Epic": Ask for reference, create folder under project directory
+- "Other": Try to match to existing OCTO folder; if found use it, if not use entered reference but do NOT create folder
+
+### Step 5: Get Entry Content
+
+**MANDATORY:** Parse natural language request FIRST to extract available information:
+- Entry type: Look for "log activity", "log meeting", "log note", "log task"
+- For meetings: Extract title, time (e.g., "at 15:30"), duration (e.g., "for 30 minutes"), meeting type
+- For tasks: Extract task description, target date (e.g., "for Monday"), project context (e.g., "no project")
+- For activities: Extract activity description and time
+- For notes: Extract topic/summary and time
+
+**RULE:** Only ask for missing information (what was not provided in request)
+
+**Entry Type Handling:**
+
+**If entry text provided and type clear:** Use directly
+
+**If no entry text or ambiguous (e.g., "log it"):** Ask user for entry type using ask_user_question: "Activity", "Meeting", "Note", "Task"
+
+**Activity entries:**
+- Use parsed activity description and time if available
+- If not parsed: Ask for entry description (project and Jira Epic already selected)
+- If user specifies time: Pass to script; else let script capture current time
+
+**Meeting entries:**
+- Use parsed title, time, duration, and type if available
+- Only ask for information not provided in original request
+- If meeting type not specified: Ask for it or use sensible default based on title
+- If not project-related: Leave project field blank
+- Format: `[HH:MM] <title> | type: <type> | duration: <duration> | project: <project>`
+
+**Note entries:**
+- Use parsed time, project context, Jira Epic context, and topic if available
+- Only ask for information not provided in original request
+- Generate 2-3 sentence summary based on request context if sufficient information provided
+- Only ask for summary if request is truly ambiguous or lacks sufficient context
+- If clear topic provided (e.g., "log a note on challenges faced"): Generate reasonable summary based on topic and session context
+- Notes are for diary-style entries: thoughts, observations, challenges, insights (not technical notes)
+- Format: `[HH:MM] project: <project> | Jira Epic: <Jira Epic>` followed by summary on next line
+- Insert blank line between Notes entries
+
+**Task entries:**
+- Use parsed task description, target date, and project context if available
+- Only ask for project context if not specified (e.g., if "no project" mentioned, skip question)
+- Check if specific date mentioned in original request
+- If future date specified: Use that date for file naming and add target date to task description
+- If no date specified: Use current date and standard format
+- Format rules:
+  - Project blank/not applicable: `- [ ] <task>`
+  - Project specified and current date: `- [ ] <project>: <task>`
+  - Project specified and future date: `- [ ] <project>: <task> (for <date>)`
+- Keep tasks for same project together in list
+
+**For new entries:** Guide through daily template structure
+
+**For existing entries:** Ask what they'd like to add to today's entry
+
+**MANDATORY:** After getting entry content, perform technical writing style proofreading before proceeding to step 6:
+- Review entry content (activity description, meeting title, note summary, or task description)
+- Automatically correct minor proofreading issues while preserving original meaning and tone
+- Enforce technical writing style: objective tone, active voice, remove ambiguity, ensure precise terminology, eliminate redundancy, focus on clarity and conciseness
+- Check for sentence complexity and simplify descriptions to make them more concise and easier to read when possible
+
+### Step 6: Create or Update Journal Entry
+
+**IMPORTANT:** Only pass date/time parameters to scripts if user specifically provided them in request
+
+**If user does NOT specify date or time:** DO NOT pass these parameters - let scripts automatically capture and use current date/time
+
+**Script calls:**
+- Activity Log: `scripts/log_activity.sh <activity_description> [project] [jira_epic]` (only add [date] [time] if user specified)
+- Meeting Log: `scripts/log_meeting.sh <title> <type> <duration> [project]` (only add [date] [time] if user specified, leave project blank if not project-related)
+- Notes: `scripts/log_note.sh [project] [jira_epic] <summary>` (only add [date] [time] if user specified, leave project/jira_epic blank if not selected)
+- Tasks: `scripts/log_task.sh <task_description> [project] [target_date]` (only add [date] if user specified specific date, leave project blank if not selected, leave target_date blank if current date)
+
+Scripts handle proper formatting, file placement, and timestamp capture
+
+### Step 7: Confirm Creation
+
+- Tell user journal entry has been created or updated
+- Provide file path
+- Offer to help review or edit entry
+
+## Script Reference
+
+**Location:** All scripts in `scripts/` directory, sourced from `config.sh`
+
+- **validate_journal.sh**: Journal validation and context retrieval
+- **log_activity.sh**: Activity logging
+- **log_meeting.sh**: Meeting logging
+- **log_note.sh**: Note logging
+- **log_task.sh**: Task logging
+
+## Example Workflows
+
+**User:** "Create a daily journal entry"
+**You:** Validate journal → extract context → present project/epic options → ask entry type → ask content → proofread → call script
+
+**User:** "skill journal Updated journal skill for devin.ai"
+**You:** Validate journal → extract context → present project/epic options → use provided text → proofread → call log_activity.sh
+
+**User:** "Add another activity to my journal"
+**You:** Validate journal → extract last used context → present project/epic options (with "Use same") → ask content → proofread → call log_activity.sh
+
+**User:** "Add a meeting to my journal"
+**You:** Validate journal → present project/epic options → use parsed meeting details if available → proofread → call log_meeting.sh
+
+**User:** "log meeting OIL and Development Team meeting at 15:30 for 30 minutes no project"
+**You:** Parse request (meeting, title, time 15:30, duration 30min, no project) → skip context selections → ask meeting type → proofread → call log_meeting.sh
+
+**User:** "Add a note to my journal"
+**You:** Validate journal → present project/epic options → use parsed details if available → proofread → call log_note.sh
+
+**User:** "Add a task to my journal"
+**You:** Validate journal → present project/epic options → use parsed description if available → proofread → call log_task.sh
+
+**User:** "Create a task for Monday to update my VDI linux system"
+**You:** Parse date ("Monday") → validate journal with target date → present project/epic options → use parsed description → proofread → call log_task.sh

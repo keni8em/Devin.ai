@@ -27,9 +27,8 @@ Create and manage daily journal entries in your Obsidian vault with project and 
 ## Why Use This Skill?
 
 - **Natural language parsing**: Extracts information from natural language requests (e.g., "log meeting OIL and Development Team meeting at 15:30 for 30 minutes no project") to minimize prompts
-- **Autonomous activity logging**: Automatically evaluates conversation progress on each interaction and logs significant work achievements without explicit instruction
 - **Intelligent context management**: Priority system for context selection (remembered choices, existing journal entry)
-- **Automatic quality control**: Technical writing style proofreading for all journal entries, including spelling, grammar, sentence simplification, objective tone, active voice, and precise terminology
+- **Automatic quality control**: Proofreading for all journal entries, including spelling, grammar, and sentence simplification
 - **Chronological ordering**: Activities and meetings are automatically sorted by timestamp, supporting backdating
 - **Project organization**: Associate entries with projects from your Obsidian vault
 - **Jira Epic tracking**: Link entries to Jira Epics for better project organization
@@ -39,7 +38,7 @@ Create and manage daily journal entries in your Obsidian vault with project and 
 
 ## Overview
 
-This skill provides a streamlined way to create and manage daily journal entries in your Obsidian vault. It operates in two modes: user-initiated logging for explicit requests, and autonomous logging that automatically captures work progress by evaluating conversation progress on each interaction. It uses a separation of concerns architecture with intelligent decision-making in the skill layer and technical operations in the script layer.
+This skill provides a streamlined way to create and manage daily journal entries in your Obsidian vault. It operates in one mode: user-initiated logging for explicit requests. It uses a separation of concerns architecture with intelligent decision-making in the skill layer and technical operations in the script layer.
 
 ## Prerequisites
 
@@ -59,8 +58,7 @@ The skill uses a **separation of concerns** approach:
   - Date/time capture and parsing
   - User interaction and context selection
   - Decision logic for project/Jira Epic selection using priority system
-  - Autonomous activity logging during work sessions based on conversation progress evaluation
-  - Technical writing style proofreading for all entries, including spelling, grammar, sentence simplification, objective tone, active voice, and precise terminology
+  - Proofreading for all entries, including spelling, grammar, and sentence simplification
   - Orchestrates the workflow and calling appropriate scripts
 
 - **System Operations Layer (Scripts)**: Handles file system queries and file writing operations
@@ -105,7 +103,7 @@ TIME_FORMAT="%H:%M"
 
 # Section Headers
 SECTION_ACTIVITY="Activity Log"
-SECTION_MEETINGS="Meeting Log"
+SECTION_MEETINGS="Meetings Log"
 SECTION_NOTES="Notes"
 SECTION_TASKS="Tasks"
 ```
@@ -201,7 +199,7 @@ This makes it efficient to log multiple entries without repeatedly selecting the
 
 The skill follows this streamlined process with clear separation of concerns:
 
-1. **User invokes skill**: `/daily_journal log activity <description>` or autonomous logging (evaluates conversation progress on each interaction)
+1. **User invokes skill**: `/daily_journal log activity <description>`
 2. **Skill (Intent Assessment & Context Selection)**:
    - Determines target date (current date or specified date)
    - Applies context priority system (remembered choices → existing journal)
@@ -211,7 +209,7 @@ The skill follows this streamlined process with clear separation of concerns:
    - Displays available projects and prompts for selection (if no context from priority system)
    - Displays available Jira Epics for selected project and prompts for selection (if no context from priority system)
    - Gets entry content (from command argument or prompts user)
-   - Applies technical writing style proofreading, including spelling, grammar, sentence simplification, objective tone, active voice, precise terminology, and clarity
+   - Applies proofreading, including spelling, grammar, and sentence simplification
 3. **Script Execution (Technical Operations)**:
    - Calls appropriate logging script (`log_activity.sh`, `log_meeting.sh`, `log_note.sh`, or `log_task.sh`)
    - Scripts handle automatic date/time capture if not provided
@@ -228,9 +226,8 @@ The skill follows this streamlined process with clear separation of concerns:
 ### Key Features
 
 - **Natural language parsing**: Extracts information from natural language requests to minimize prompts
-- **Autonomous activity logging**: Evaluates conversation progress on each interaction and automatically logs significant work achievements
 - **Context priority system**: Remembered choices and existing journal context
-- **Automatic quality control**: Technical writing style proofreading for all entries, including spelling, grammar, sentence simplification, objective tone, active voice, and precise terminology
+- **Automatic quality control**: Proofreading for all entries, including spelling, grammar, and sentence simplification
 - **Chronological ordering**: Activities and meetings automatically sorted by timestamp
 - **Context reuse**: Intelligent context management reduces repetitive selections
 - **Project grouping**: Tasks automatically organized by project
@@ -241,34 +238,6 @@ The skill follows this streamlined process with clear separation of concerns:
 - **Automatic timestamp handling**: Scripts capture current date/time when not provided
 
 ## Advanced Usage
-
-### Autonomous Activity Logging
-
-In addition to user-initiated logging, the skill supports autonomous activity logging during work sessions. The skill evaluates conversation progress on each interaction for key milestones and automatically logs activities and notes to create a record of the work day and achievements.
-
-**Two-layer structure:**
-- **Activity Log (Execution Layer)**: Objective actions and outcomes in format `[Time] Action → Outcome (Context)`
-- **Notes (Cognitive Layer)**: Insights, decisions, reasoning in format `[Type]` followed by 2-3 sentences
-
-**Autonomous logging triggers:**
-- Completed work or tasks
-- Debugging or problem-solving progress
-- System/tool usage and configuration
-- Meaningful actions taken
-- Files modified or code changes
-- Insights formed (for notes)
-- Non-trivial problems solved (for notes)
-- Decisions made (for notes)
-
-**Autonomous logging characteristics:**
-- Evaluates on each conversation interaction with session history evaluation (not just last message)
-- Only writes if criteria is matched
-- Uses current date/time automatically
-- Applies the same context priority system as user-initiated logging
-- Includes technical writing style proofreading
-- Does not interrupt workflow or require confirmation
-- Conservative bias: Activity ONLY when uncertain, Notes only for clear cognitive value
-- Applies inference policy for missing details without fabricating outcomes
 
 ### Detailed Entry Process
 
@@ -307,8 +276,6 @@ When you invoke the skill, it follows this detailed process:
 
 ### Entry Types
 
-**User-initiated logging format** (used by scripts):
-
 **Activities**: Log work and accomplishments with project/epic context
 ```
 [HH:MM] Activity description | project: Project | Jira Epic: OCTO-12345
@@ -330,19 +297,6 @@ Summary text here
 - [ ] Project: Task description
 - [ ] Project: Another task
 - [ ] Task without project
-```
-
-**Autonomous logging format** (ChatGPT.md framework):
-
-**Activities**: Objective actions and outcomes
-```
-[Time] Action → Outcome (Context/Artifact)
-```
-
-**Notes**: Insights, decisions, reasoning with type tags
-```
-[Type]
-2-3 sentence note
 ```
 
 ## Files
@@ -368,12 +322,8 @@ obsidian/daily_journal/
   - Skill name and description
   - Allowed tools (write, read, exec, find_file_by_name, ask_user_question)
   - Triggers (model and user initiated)
-  - Quick Reference for immediate decision support
-  - Core Principles (architecture, operating modes, context priority)
-  - Autonomous Logging Rules (ChatGPT.md framework with trigger conditions)
-  - User-Initiated Logging Procedures (Steps 1-7 with detailed natural language parsing)
-  - Script Reference
-  - Example Workflows
+  - Detailed instructions for the entire workflow
+  - Example usage patterns
 
 - **config.sh**: Skill-specific configuration file:
   - Vault path and journal folder settings

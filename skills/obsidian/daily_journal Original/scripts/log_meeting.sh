@@ -59,7 +59,7 @@ else
     MEETING_LINE="[$TIME] $TITLE | type: $TYPE | duration: $DURATION"
 fi
 
-# Find the Meeting Log section and insert in chronological order
+# Find the Meetings Log section and insert in chronological order
 # Get all existing meeting times and their line numbers
 MEETING_TIMES=$(sed -n "/^## $SECTION_MEETINGS/,/^---/p" "$ENTRY_FILE" | grep -n "^\[")
 
