@@ -52,6 +52,11 @@ if [ ! -f "$ENTRY_FILE" ]; then
     exit 1
 fi
 
+# Ensure duration has units
+if [[ ! $DURATION =~ [0-9]+[[:space:]]*(minutes|mins|min|m|h|hours|hrs|hour) ]]; then
+    DURATION="$DURATION minutes"
+fi
+
 # Build the meeting line
 if [ -n "$PROJECT" ]; then
     MEETING_LINE="[$TIME] $TITLE | type: $TYPE | duration: $DURATION | project: $PROJECT"
@@ -59,7 +64,7 @@ else
     MEETING_LINE="[$TIME] $TITLE | type: $TYPE | duration: $DURATION"
 fi
 
-# Find the Meetings Log section and insert in chronological order
+# Find the Meeting Log section and insert in chronological order
 # Get all existing meeting times and their line numbers
 MEETING_TIMES=$(sed -n "/^## $SECTION_MEETINGS/,/^---/p" "$ENTRY_FILE" | grep -n "^\[")
 

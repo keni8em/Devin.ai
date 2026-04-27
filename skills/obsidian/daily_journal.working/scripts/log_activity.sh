@@ -53,16 +53,16 @@ fi
 
 # Build the activity line
 if [ -n "$PROJECT" ] && [ -n "$JIRA_EPIC" ]; then
-    ACTIVITY_LINE="[$TIME] $ACTIVITY | project: ${PROJECT} | Jira Epic: $JIRA_EPIC"
+    ACTIVITY_LINE="- [$TIME] $ACTIVITY | project: ${PROJECT} | Jira Epic: $JIRA_EPIC"
 elif [ -n "$PROJECT" ]; then
-    ACTIVITY_LINE="[$TIME] $ACTIVITY | project: ${PROJECT}"
+    ACTIVITY_LINE="- [$TIME] $ACTIVITY | project: ${PROJECT}"
 else
-    ACTIVITY_LINE="[$TIME] $ACTIVITY"
+    ACTIVITY_LINE="- [$TIME] $ACTIVITY"
 fi
 
 # Find the Activity Log section and insert in chronological order
 # Get all existing activity times and their line numbers
-ACTIVITY_TIMES=$(sed -n "/^## $SECTION_ACTIVITY/,/^---/p" "$ENTRY_FILE" | grep -n "^\[")
+ACTIVITY_TIMES=$(sed -n "/^## $SECTION_ACTIVITY/,/^---/p" "$ENTRY_FILE" | grep -n "^- \[")
 
 if [ -z "$ACTIVITY_TIMES" ]; then
     # No existing activities, insert after the header

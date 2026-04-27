@@ -1,97 +1,76 @@
 #!/bin/bash
-# log_activity.sh - Log an activity to the daily journal
-# Usage: log_activity.sh [date] [time] <activity_description> [project] [jira_epic]
-# If date is not provided, uses current date
-# If time is not provided, uses current time
 
-# Source configuration
+# Script to log an action to the daily journal
+# Source the configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../config.sh"
+CONFIG_DIR="$(dirname "$SCRIPT_DIR")"
+source "$CONFIG_DIR/config.sh"
 
-# Parse parameters - date and time are optional, activity description is required
-if [ -z "$1" ]; then
-    echo "ERROR: Activity description is required" >&2
-    echo "Usage: log_activity.sh [date] [time] <activity_description> [project] [jira_epic]" >&2
+# Parse parameters
+DESCRIPTION="$1"
+PROJECT="$2"
+JIRA_EPIC="$3"
+TIME="$4"
+
+# Default to current time if not provided
+if [ -z "$TIME" ]; then
+    TIME=$(date +"$TIME_FORMAT")
+fi
+
+# Check if description is provided
+if [ -z "$DESCRIPTION" ]; then
+    echo "Error: Description is required"
     exit 1
 fi
 
-# Determine if first parameter is a date (YYYY-MM-DD format) or activity description
-if [[ $1 =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    DATE="$1"
-    shift
-    # Check if next parameter is a time (HH:MM format) or activity description
-    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
-        TIME="$1"
-        shift
-    else
-        TIME=$(date +"$TIME_FORMAT")
-    fi
-else
-    DATE=$(date +"$DATE_FORMAT")
-    # Check if first parameter is a time (HH:MM format) or activity description
-    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
-        TIME="$1"
-        shift
-    else
-        TIME=$(date +"$TIME_FORMAT")
-    fi
-fi
+# Determine journal file path (use today's date)
+JOURNAL_PATH="$OBSIDIAN_VAULT_PATH/$JOURNAL_FOLDER"
+DATE=$(date +"$DATE_FORMAT")
+JOURNAL_FILE="$JOURNAL_PATH/$DATE.md"
 
-ACTIVITY="$1"
-PROJECT="${2:-}"
-JIRA_EPIC="${3:-}"
-
-# Get the journal directory
-JOURNAL_DIR="$OBSIDIAN_VAULT_PATH/$JOURNAL_FOLDER"
-ENTRY_FILE="$JOURNAL_DIR/$DATE.md"
-
-# Check if entry file exists
-if [ ! -f "$ENTRY_FILE" ]; then
-    echo "ERROR: Entry file not found: $ENTRY_FILE" >&2
+# Check if journal file exists
+if [ ! -f "$JOURNAL_FILE" ]; then
+    echo "Error: Journal file not found: $JOURNAL_FILE"
     exit 1
 fi
 
-# Build the activity line
-if [ -n "$PROJECT" ] && [ -n "$JIRA_EPIC" ]; then
-    ACTIVITY_LINE="[$TIME] $ACTIVITY | project: ${PROJECT} | Jira Epic: $JIRA_EPIC"
-elif [ -n "$PROJECT" ]; then
-    ACTIVITY_LINE="[$TIME] $ACTIVITY | project: ${PROJECT}"
-else
-    ACTIVITY_LINE="[$TIME] $ACTIVITY"
+# Format the activity line
+ACTIVITY_LINE="- [$TIME] $DESCRIPTION"
+if [ -n "$PROJECT" ]; then
+    ACTIVITY_LINE="$ACTIVITY_LINE | project: $PROJECT"
+fi
+if [ -n "$JIRA_EPIC" ]; then
+    ACTIVITY_LINE="$ACTIVITY_LINE | jira: $JIRA_EPIC"
+fi
+ACTIVITY_LINE="$ACTIVITY_LINE\n"
+
+# Check if Activity Log section exists
+if ! grep -q "^## Activity Log" "$JOURNAL_FILE"; then
+    # Create Activity Log section
+    sed -i "/^## Meeting Log/i ## Activity Log\n\n---\n" "$JOURNAL_FILE"
 fi
 
-# Find the Activity Log section and insert in chronological order
-# Get all existing activity times and their line numbers
-ACTIVITY_TIMES=$(sed -n "/^## $SECTION_ACTIVITY/,/^---/p" "$ENTRY_FILE" | grep -n "^\[")
+# Insert the activity chronologically
+# Find the Activity Log section and insert activities in chronological order
+# Get all existing activity timestamps
+EXISTING_TIMES=$(grep "^- \[" "$JOURNAL_FILE" | sed 's/- \[\([^]]*\)\].*/\1/' | sort)
 
-if [ -z "$ACTIVITY_TIMES" ]; then
-    # No existing activities, insert after the header
-    sed -i "/^## $SECTION_ACTIVITY$/a\\\n$ACTIVITY_LINE" "$ENTRY_FILE"
-else
-    # Find the correct position based on time
-    SECTION_START=$(grep -n "^## $SECTION_ACTIVITY" "$ENTRY_FILE" | cut -d: -f1)
-    INSERT_LINE=""  # Will hold the line to insert before
-    
-    while IFS=: read -r line_num content; do
-        ACTUAL_LINE=$((SECTION_START + line_num - 1))
-        EXISTING_TIME=$(echo "$content" | sed 's/\[//' | sed 's/\].*//')
-        
-        # Compare times (assuming HH:MM format)
-        if [ "$TIME" \< "$EXISTING_TIME" ]; then
-            INSERT_LINE=$ACTUAL_LINE
-            break
-        fi
-    done <<< "$ACTIVITY_TIMES"
-    
-    if [ -n "$INSERT_LINE" ]; then
-        # Insert before the activity that's later
-        sed -i "${INSERT_LINE}i\\$ACTIVITY_LINE" "$ENTRY_FILE"
-    else
-        # Insert at the end (before ---)
-        LAST_ACTIVITY_LINE=$(echo "$ACTIVITY_TIMES" | tail -1 | cut -d: -f1)
-        ACTUAL_LAST_LINE=$((SECTION_START + LAST_ACTIVITY_LINE -1))
-        sed -i "${ACTUAL_LAST_LINE}a\\$ACTIVITY_LINE" "$ENTRY_FILE"
+# Find the correct insertion point
+INSERT_LINE=""
+for EXISTING_TIME in $EXISTING_TIMES; do
+    if [ "$TIME" \< "$EXISTING_TIME" ]; then
+        INSERT_LINE=$(grep -n "^- \[$EXISTING_TIME\]" "$JOURNAL_FILE" | head -1 | cut -d: -f1)
+        break
     fi
+done
+
+if [ -n "$INSERT_LINE" ]; then
+    # Insert before the line with the later time
+    sed -i "${INSERT_LINE}i\\$ACTIVITY_LINE" "$JOURNAL_FILE"
+else
+    # Insert at the end of Activity Log section (before ---)
+    sed -i "/^## Activity Log/,/^---/s/^---/$ACTIVITY_LINE\n---/" "$JOURNAL_FILE"
 fi
 
-echo "LOGGED:$ENTRY_FILE"
+echo "Activity logged to $JOURNAL_FILE"
+

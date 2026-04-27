@@ -1,96 +1,82 @@
 #!/bin/bash
-# log_meeting.sh - Log a meeting to the daily journal
-# Usage: log_meeting.sh [date] [time] <title> <type> <duration> [project]
-# If date is not provided, uses current date
-# If time is not provided, uses current time
 
-# Source configuration
+# Script to log a meeting to the daily journal
+# Source the configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../config.sh"
+CONFIG_DIR="$(dirname "$SCRIPT_DIR")"
+source "$CONFIG_DIR/config.sh"
 
-# Parse parameters - date and time are optional, title, type, and duration are required
-if [ -z "$1" ]; then
-    echo "ERROR: Title, type, and duration are required" >&2
-    echo "Usage: log_meeting.sh [date] [time] <title> <type> <duration> [project]" >&2
+# Parse parameters
+MEETING_TITLE="$1"
+MEETING_TYPE="$2"
+MEETING_DURATION="$3"
+PROJECT="$4"
+TIME="$5"
+
+# Default to current time if not provided
+if [ -z "$TIME" ]; then
+    TIME=$(date +"$TIME_FORMAT")
+fi
+
+# Check if all required fields are provided
+if [ -z "$MEETING_TITLE" ]; then
+    echo "Error: Meeting title is required"
+    exit 1
+fi
+if [ -z "$MEETING_TYPE" ]; then
+    echo "Error: Meeting type is required"
+    exit 1
+fi
+if [ -z "$MEETING_DURATION" ]; then
+    echo "Error: Meeting duration is required"
     exit 1
 fi
 
-# Determine if first parameter is a date (YYYY-MM-DD format) or title
-if [[ $1 =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    DATE="$1"
-    shift
-    # Check if next parameter is a time (HH:MM format) or title
-    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
-        TIME="$1"
-        shift
-    else
-        TIME=$(date +"$TIME_FORMAT")
-    fi
-else
-    DATE=$(date +"$DATE_FORMAT")
-    # Check if first parameter is a time (HH:MM format) or title
-    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
-        TIME="$1"
-        shift
-    else
-        TIME=$(date +"$TIME_FORMAT")
-    fi
-fi
+# Determine journal file path (use today's date)
+JOURNAL_PATH="$OBSIDIAN_VAULT_PATH/$JOURNAL_FOLDER"
+DATE=$(date +"$DATE_FORMAT")
+JOURNAL_FILE="$JOURNAL_PATH/$DATE.md"
 
-TITLE="$1"
-TYPE="$2"
-DURATION="$3"
-PROJECT="${4:-}"
-
-# Get the journal directory
-JOURNAL_DIR="$OBSIDIAN_VAULT_PATH/$JOURNAL_FOLDER"
-ENTRY_FILE="$JOURNAL_DIR/$DATE.md"
-
-# Check if entry file exists
-if [ ! -f "$ENTRY_FILE" ]; then
-    echo "ERROR: Entry file not found: $ENTRY_FILE" >&2
+# Check if journal file exists
+if [ ! -f "$JOURNAL_FILE" ]; then
+    echo "Error: Journal file not found: $JOURNAL_FILE"
     exit 1
 fi
 
-# Build the meeting line
+# Format the meeting line
+MEETING_LINE="- [$TIME] $MEETING_TITLE"
+MEETING_LINE="$MEETING_LINE | type: $MEETING_TYPE"
+MEETING_LINE="$MEETING_LINE | duration: $MEETING_DURATION"
 if [ -n "$PROJECT" ]; then
-    MEETING_LINE="[$TIME] $TITLE | type: $TYPE | duration: $DURATION | project: $PROJECT"
-else
-    MEETING_LINE="[$TIME] $TITLE | type: $TYPE | duration: $DURATION"
+    MEETING_LINE="$MEETING_LINE | project: $PROJECT"
 fi
 
-# Find the Meeting Log section and insert in chronological order
-# Get all existing meeting times and their line numbers
-MEETING_TIMES=$(sed -n "/^## $SECTION_MEETINGS/,/^---/p" "$ENTRY_FILE" | grep -n "^\[")
+# Check if Meeting Log section exists
+if ! grep -q "^## Meeting Log" "$JOURNAL_FILE"; then
+    # Create Meeting Log section
+    sed -i "/^## Notes/i ## Meeting Log\n\n---\n" "$JOURNAL_FILE"
+fi
 
-if [ -z "$MEETING_TIMES" ]; then
-    # No existing meetings, insert after the header
-    sed -i "/^## $SECTION_MEETINGS$/a\\\n$MEETING_LINE" "$ENTRY_FILE"
-else
-    # Find the correct position based on time
-    SECTION_START=$(grep -n "^## $SECTION_MEETINGS" "$ENTRY_FILE" | cut -d: -f1)
-    INSERT_LINE=""  # Will hold the line to insert before
-    
-    while IFS=: read -r line_num content; do
-        ACTUAL_LINE=$((SECTION_START + line_num - 1))
-        EXISTING_TIME=$(echo "$content" | sed 's/\[//' | sed 's/\].*//')
-        
-        # Compare times (assuming HH:MM format)
-        if [ "$TIME" \< "$EXISTING_TIME" ]; then
-            INSERT_LINE=$ACTUAL_LINE
-            break
-        fi
-    done <<< "$MEETING_TIMES"
-    
-    if [ -n "$INSERT_LINE" ]; then
-        # Insert before the meeting that's later
-        sed -i "${INSERT_LINE}i\\$MEETING_LINE" "$ENTRY_FILE"
+# Insert the meeting at the end of Meeting Log section
+# Only search for lines within the Meeting Log section (between ## Meeting Log and ---)
+MEETING_START=$(grep -n "^## Meeting Log" "$JOURNAL_FILE" | head -1 | cut -d: -f1)
+MEETING_END=$(grep -n "^---" "$JOURNAL_FILE" | awk -F: '$1>'$MEETING_START' {print $1; exit}')
+
+if [ -n "$MEETING_END" ]; then
+    # Check if there are any lines starting with - in the Meeting Log section
+    MEETING_LINES=$(sed -n "${MEETING_START},${MEETING_END}p" "$JOURNAL_FILE" | grep -n "^- " | tail -1 | cut -d: -f1)
+    if [ -n "$MEETING_LINES" ]; then
+        # Find the absolute line number of the last meeting
+        LAST_LINE=$((MEETING_START + MEETING_LINES - 1))
+        sed -i "${LAST_LINE}a\\$MEETING_LINE" "$JOURNAL_FILE"
     else
-        # Insert at the end (before ---)
-        LAST_MEETING_LINE=$(echo "$MEETING_TIMES" | tail -1 | cut -d: -f1)
-        ACTUAL_LAST_LINE=$((SECTION_START + LAST_MEETING_LINE -1))
-        sed -i "${ACTUAL_LAST_LINE}a\\$MEETING_LINE" "$ENTRY_FILE"
+        # Insert at the beginning of the Meeting Log section (after header)
+        sed -i "${MEETING_START}a\\\n$MEETING_LINE" "$JOURNAL_FILE"
     fi
+else
+    # No --- found, insert at the beginning of the Meeting Log section (after header)
+    sed -i "${MEETING_START}a\\\n$MEETING_LINE" "$JOURNAL_FILE"
 fi
 
-echo "LOGGED:$ENTRY_FILE"
+echo "Meeting logged to $JOURNAL_FILE"
+

@@ -1,99 +1,93 @@
 #!/bin/bash
-# log_note.sh - Log a daily note to the daily journal
-# Usage: log_note.sh [date] [time] [project] [jira_epic] <summary>
-# If date is not provided, uses current date
-# If time is not provided, uses current time
-# Summary is required
 
-# Source configuration
+# Script to log a note to the daily journal
+# Source the configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../config.sh"
+CONFIG_DIR="$(dirname "$SCRIPT_DIR")"
+source "$CONFIG_DIR/config.sh"
 
-# Parse parameters - date, time, project, and jira_epic are optional, summary is required
-if [ -z "$1" ]; then
-    echo "ERROR: Summary is required" >&2
-    echo "Usage: log_note.sh [date] [time] [project] [jira_epic] <summary>" >&2
+# Parse parameters
+NOTE_TYPE="$1"
+NOTE_DETAIL="$2"
+PROJECT="$3"
+JIRA_EPIC="$4"
+TIME="$5"
+
+# Default to current time if not provided
+if [ -z "$TIME" ]; then
+    TIME=$(date +"$TIME_FORMAT")
+fi
+
+# Validate note type
+if [ -z "$NOTE_TYPE" ]; then
+    echo "Error: Note type is required"
+    exit 1
+fi
+VALID_TYPE=false
+for TYPE in "${NOTE_TYPES[@]}"; do
+    if [ "$NOTE_TYPE" = "$TYPE" ]; then
+        VALID_TYPE=true
+        break
+    fi
+done
+if [ "$VALID_TYPE" = false ]; then
+    echo "Error: Invalid note type. Valid types are: ${NOTE_TYPES[*]}"
     exit 1
 fi
 
-# Initialize variables
-DATE=""
-TIME=""
-PROJECT=""
-JIRA_EPIC=""
-
-# Determine if first parameter is a date (YYYY-MM-DD format) or not
-if [[ $1 =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
-    DATE="$1"
-    shift
-    # Check if next parameter is a time (HH:MM format) or not
-    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
-        TIME="$1"
-        shift
-    else
-        TIME=$(date +"$TIME_FORMAT")
-    fi
-else
-    DATE=$(date +"$DATE_FORMAT")
-    # Check if first parameter is a time (HH:MM format) or not
-    if [[ $1 =~ ^[0-9]{2}:[0-9]{2}$ ]]; then
-        TIME="$1"
-        shift
-    else
-        TIME=$(date +"$TIME_FORMAT")
-    fi
-fi
-
-# Now we have date and time set, remaining parameters are project, jira_epic, summary
-# We need to determine which are which
-# If we have 3+ parameters left, the last one is summary, first two could be project/jira_epic
-# If we have 2 parameters left, the last one is summary, first could be project
-# If we have 1 parameter left, it's the summary
-
-PARAM_COUNT=$#
-if [ $PARAM_COUNT -eq 1 ]; then
-    SUMMARY="$1"
-elif [ $PARAM_COUNT -eq 2 ]; then
-    PROJECT="$1"
-    SUMMARY="$2"
-elif [ $PARAM_COUNT -ge 3 ]; then
-    PROJECT="$1"
-    JIRA_EPIC="$2"
-    # All remaining parameters are part of the summary
-    shift 2
-    SUMMARY="$*"
-fi
-
-# Get the journal directory
-JOURNAL_DIR="$OBSIDIAN_VAULT_PATH/$JOURNAL_FOLDER"
-ENTRY_FILE="$JOURNAL_DIR/$DATE.md"
-
-# Check if entry file exists
-if [ ! -f "$ENTRY_FILE" ]; then
-    echo "ERROR: Entry file not found: $ENTRY_FILE" >&2
+# Check if note detail is provided
+if [ -z "$NOTE_DETAIL" ]; then
+    echo "Error: Note detail is required"
     exit 1
 fi
 
-# Build the note header
-if [ -n "$PROJECT" ] && [ -n "$JIRA_EPIC" ]; then
-    NOTE_HEADER="[$TIME] project: $PROJECT | Jira Epic: $JIRA_EPIC"
-elif [ -n "$PROJECT" ]; then
-    NOTE_HEADER="[$TIME] project: $PROJECT"
-else
-    NOTE_HEADER="[$TIME]"
+# Determine journal file path (use today's date)
+JOURNAL_PATH="$OBSIDIAN_VAULT_PATH/$JOURNAL_FOLDER"
+DATE=$(date +"$DATE_FORMAT")
+JOURNAL_FILE="$JOURNAL_PATH/$DATE.md"
+
+# Check if journal file exists
+if [ ! -f "$JOURNAL_FILE" ]; then
+    echo "Error: Journal file not found: $JOURNAL_FILE"
+    exit 1
 fi
 
-# Find the Notes section and insert the note
-# Check for existing entries
-if sed -n "/^## $SECTION_NOTES/,/^---/p" "$ENTRY_FILE" | grep -q "^\["; then
-    # Has existing entries, find the last one and insert after it
-    LAST_LINE=$(sed -n "/^## $SECTION_NOTES/,/^---/p" "$ENTRY_FILE" | grep -n "^\[" | tail -1 | cut -d: -f1)
-    SECTION_START=$(grep -n "^## $SECTION_NOTES" "$ENTRY_FILE" | cut -d: -f1)
-    ACTUAL_LINE=$((SECTION_START + LAST_LINE))  # Insert after the summary line
-    sed -i "${ACTUAL_LINE}a\\\n$NOTE_HEADER\n$SUMMARY" "$ENTRY_FILE"
-else
-    # No existing entries, insert after the header
-    sed -i "/^## $SECTION_NOTES$/a\\\n$NOTE_HEADER\n$SUMMARY" "$ENTRY_FILE"
+# Format the note
+NOTE_HEADER="[$TIME] $NOTE_TYPE\n"
+if [ -n "$PROJECT" ] || [ -n "$JIRA_EPIC" ]; then
+    NOTE_CONTEXT=""
+    if [ -n "$PROJECT" ]; then
+        NOTE_CONTEXT="$PROJECT"
+    fi
+    if [ -n "$JIRA_EPIC" ]; then
+        if [ -n "$NOTE_CONTEXT" ]; then
+            NOTE_CONTEXT="$NOTE_CONTEXT | $JIRA_EPIC"
+        else
+            NOTE_CONTEXT="$JIRA_EPIC"
+        fi
+    fi
+    NOTE_HEADER="$NOTE_HEADER$NOTE_CONTEXT\n"
+fi
+NOTE_HEADER="$NOTE_HEADER$NOTE_DETAIL\n"
+
+# Check if Notes section exists
+if ! grep -q "^## Notes" "$JOURNAL_FILE"; then
+    # Create Notes section at the end of the file
+    echo -e "\n## Notes\n\n---\n" >> "$JOURNAL_FILE"
 fi
 
-echo "LOGGED:$ENTRY_FILE"
+# Insert the note at the end of Notes section
+# Only search within the Notes section (between ## Notes and ---)
+NOTES_START=$(grep -n "^## Notes" "$JOURNAL_FILE" | head -1 | cut -d: -f1)
+NOTES_END=$(grep -n "^---" "$JOURNAL_FILE" | awk -F: '$1>'$NOTES_START' {print $1; exit}')
+
+if [ -n "$NOTES_END" ]; then
+    # Insert before the --- in the Notes section
+    sed -i "${NOTES_END}i\\$NOTE_HEADER" "$JOURNAL_FILE"
+else
+    # No --- found after Notes, append to end of file
+    echo -e "$NOTE_HEADER" >> "$JOURNAL_FILE"
+fi
+
+echo "Note logged to $JOURNAL_FILE"
+

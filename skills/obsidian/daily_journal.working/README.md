@@ -27,8 +27,9 @@ Create and manage daily journal entries in your Obsidian vault with project and 
 ## Why Use This Skill?
 
 - **Natural language parsing**: Extracts information from natural language requests (e.g., "log meeting OIL and Development Team meeting at 15:30 for 30 minutes no project") to minimize prompts
-- **Intelligent context management**: Priority system for context selection (remembered choices, existing journal entry)
-- **Automatic quality control**: Proofreading for all journal entries, including spelling, grammar, and sentence simplification
+- **Autonomous activity logging**: Automatically evaluates conversation progress on each interaction and logs significant work achievements without explicit instruction
+- **Intelligent context management**: Priority system for context selection (request context, remembered choices)
+- **Automatic quality control**: Technical writing style proofreading for all journal entries, including spelling, grammar, sentence simplification, objective tone, active voice, and precise terminology
 - **Chronological ordering**: Activities and meetings are automatically sorted by timestamp, supporting backdating
 - **Project organization**: Associate entries with projects from your Obsidian vault
 - **Jira Epic tracking**: Link entries to Jira Epics for better project organization
@@ -38,7 +39,7 @@ Create and manage daily journal entries in your Obsidian vault with project and 
 
 ## Overview
 
-This skill provides a streamlined way to create and manage daily journal entries in your Obsidian vault. It operates in one mode: user-initiated logging for explicit requests. It uses a separation of concerns architecture with intelligent decision-making in the skill layer and technical operations in the script layer.
+This skill provides a streamlined way to create and manage daily journal entries in your Obsidian vault. It operates in two modes: user-initiated logging for explicit requests, and autonomous logging that automatically captures work progress by evaluating conversation progress on each interaction. It uses a separation of concerns architecture with intelligent decision-making in the skill layer and technical operations in the script layer.
 
 ## Prerequisites
 
@@ -58,7 +59,8 @@ The skill uses a **separation of concerns** approach:
   - Date/time capture and parsing
   - User interaction and context selection
   - Decision logic for project/Jira Epic selection using priority system
-  - Proofreading for all entries, including spelling, grammar, and sentence simplification
+  - Autonomous activity logging during work sessions based on conversation progress evaluation
+  - Technical writing style proofreading for all entries, including spelling, grammar, sentence simplification, objective tone, active voice, and precise terminology
   - Orchestrates the workflow and calling appropriate scripts
 
 - **System Operations Layer (Scripts)**: Handles file system queries and file writing operations
@@ -103,7 +105,7 @@ TIME_FORMAT="%H:%M"
 
 # Section Headers
 SECTION_ACTIVITY="Activity Log"
-SECTION_MEETINGS="Meetings Log"
+SECTION_MEETINGS="Meeting Log"
 SECTION_NOTES="Notes"
 SECTION_TASKS="Tasks"
 ```
@@ -128,13 +130,23 @@ Each project can contain multiple OCTO (Jira Epic) folders for context tracking.
 
 ### Basic Usage
 
+**Invoke skill without parameters:**
+```
+/daily_journal
+```
+
+The skill will:
+1. Inform you what it can do (log activities, meetings, notes, tasks, review journal, autonomous logging)
+2. Set project and Jira Epic context for the current session
+3. Tell you how to log to the journal and finish
+
 **Log an activity with automatic context:**
 ```
 /daily_journal log activity Completed code review
 ```
 
 The skill will:
-1. Prompt for project selection (with context from last entry)
+1. Prompt for project selection
 2. Prompt for Jira Epic selection (if project selected)
 3. Insert the activity in chronological order
 
@@ -190,8 +202,8 @@ The skill will insert the entry at the correct chronological position based on t
 ### Context Reuse
 
 The skill uses a priority system for context determination:
-1. **Remembered choices**: Reuses project/epic choices from previous selections during the same session
-2. **Existing journal entry**: Extracts context from the current day's journal entry if available
+1. **Request context**: Uses project/epic explicitly provided in the natural language request
+2. **Remembered choices**: Reuses project/epic choices from previous selections during the same session
 
 This makes it efficient to log multiple entries without repeatedly selecting the same context.
 
@@ -199,24 +211,26 @@ This makes it efficient to log multiple entries without repeatedly selecting the
 
 The skill follows this streamlined process with clear separation of concerns:
 
-1. **User invokes skill**: `/daily_journal log activity <description>`
-2. **Skill (Intent Assessment & Context Selection)**:
+1. **User invokes skill**: `/daily_journal log activity <description>` or `/daily_journal` (no parameters) or autonomous logging (evaluates conversation progress on each interaction)
+2. **Skill (Parameter Check)**:
+   - If parameters provided: Proceed to intent assessment
+   - If NO parameters: Inform user what skill can do, set project/Jira Epic context for session, tell user how to log to journal, finish
+3. **Skill (Intent Assessment & Context Selection)**:
    - Determines target date (current date or specified date)
-   - Applies context priority system (remembered choices → existing journal)
+   - Applies context priority system (request context → remembered choices → no context)
    - Changes to skill directory for script execution
    - Calls `validate_journal.sh` to initialize journal and get project/epic context
-   - If journal exists, extracts last used context for efficiency
    - Displays available projects and prompts for selection (if no context from priority system)
    - Displays available Jira Epics for selected project and prompts for selection (if no context from priority system)
    - Gets entry content (from command argument or prompts user)
-   - Applies proofreading, including spelling, grammar, and sentence simplification
-3. **Script Execution (Technical Operations)**:
+   - Applies technical writing style proofreading, including spelling, grammar, sentence simplification, objective tone, active voice, precise terminology, and clarity
+4. **Script Execution (Technical Operations)**:
    - Calls appropriate logging script (`log_activity.sh`, `log_meeting.sh`, `log_note.sh`, or `log_task.sh`)
    - Scripts handle automatic date/time capture if not provided
    - Scripts handle file operations and content insertion
    - Chronological ordering handled for activities and meetings
    - Tasks grouped by project automatically
-4. **Result**: Journal entry created or updated in Obsidian vault
+5. **Result**: Journal entry created or updated in Obsidian vault
 
 **Key Separation of Concerns:**
 - **Skill**: User interaction, context selection, decision making, workflow orchestration, quality validation
@@ -226,8 +240,10 @@ The skill follows this streamlined process with clear separation of concerns:
 ### Key Features
 
 - **Natural language parsing**: Extracts information from natural language requests to minimize prompts
-- **Context priority system**: Remembered choices and existing journal context
-- **Automatic quality control**: Proofreading for all entries, including spelling, grammar, and sentence simplification
+- **Autonomous activity logging**: Evaluates conversation progress on each interaction and automatically logs significant work achievements
+- **Context priority system**: Request context and remembered choices
+- **Automatic quality control**: Technical writing style proofreading for all entries, including spelling, grammar, sentence simplification, objective tone, active voice, and precise terminology
+- **Audit tracking**: Source indication in Devin output (user, autonomous, intuition) for all journal entries
 - **Chronological ordering**: Activities and meetings automatically sorted by timestamp
 - **Context reuse**: Intelligent context management reduces repetitive selections
 - **Project grouping**: Tasks automatically organized by project
@@ -238,6 +254,44 @@ The skill follows this streamlined process with clear separation of concerns:
 - **Automatic timestamp handling**: Scripts capture current date/time when not provided
 
 ## Advanced Usage
+
+### Audit Tracking
+
+For audit purposes, the skill indicates the source of each journal entry in the Devin output before writing to the file:
+
+- **user**: Entry created due to explicit user direction (user-initiated logging)
+- **autonomous**: Entry created by the autonomous logging system based on conversation evaluation
+- **intuition**: Entry created when Devin decides to write to the log file on its own, not because of user direction or autonomous logging success
+
+The source is indicated in the Devin output (e.g., "Writing to journal [source: user]...") but is not written to the actual journal files, keeping the log entries clean while providing audit trail visibility.
+
+### Autonomous Activity Logging
+
+In addition to user-initiated logging, the skill supports autonomous activity logging during work sessions. The skill evaluates conversation progress on each interaction for key milestones and automatically logs activities and notes to create a record of the work day and achievements.
+
+**Two-layer structure:**
+- **Activity Log (Execution Layer)**: Objective actions and outcomes in format `- [Time] Action → Outcome (Context)`
+- **Notes (Cognitive Layer)**: Insights, decisions, reasoning in format `[Type]` followed by 2-3 sentences
+
+**Autonomous logging triggers:**
+- Completed work or tasks
+- Debugging or problem-solving progress
+- System/tool usage and configuration
+- Meaningful actions taken
+- Files modified or code changes
+- Insights formed (for notes)
+- Non-trivial problems solved (for notes)
+- Decisions made (for notes)
+
+**Autonomous logging characteristics:**
+- Evaluates on each conversation interaction with session history evaluation (not just last message)
+- Only writes if criteria is matched
+- Uses current date/time automatically
+- Applies the same context priority system as user-initiated logging
+- Includes technical writing style proofreading
+- Does not interrupt workflow or require confirmation
+- Conservative bias: Activity ONLY when uncertain, Notes only for clear cognitive value
+- Applies inference policy for missing details without fabricating outcomes
 
 ### Detailed Entry Process
 
@@ -260,8 +314,7 @@ When you invoke the skill, it follows this detailed process:
 
 **Step 3: Context Selection**
 - Parses project context and displays available projects
-- If journal exists, extracts last used project and Jira Epic
-- Presents 4 options for project selection (with context-aware suggestions)
+- Presents 4 options for project selection
 - If project selected, presents Jira Epic options for that project
 
 **Step 4: Content Creation**
@@ -276,12 +329,14 @@ When you invoke the skill, it follows this detailed process:
 
 ### Entry Types
 
+**User-initiated logging format** (used by scripts):
+
 **Activities**: Log work and accomplishments with project/epic context
 ```
 [HH:MM] Activity description | project: Project | Jira Epic: OCTO-12345
 ```
 
-**Meetings**: Record meetings with type, duration, and project context
+**Meetings**: Record meetings with type, duration (with units), and project context
 ```
 [HH:MM] Meeting title | type: Type | duration: 1 hour | project: Project
 ```
@@ -297,6 +352,19 @@ Summary text here
 - [ ] Project: Task description
 - [ ] Project: Another task
 - [ ] Task without project
+```
+
+**Autonomous logging format** (ChatGPT.md framework):
+
+**Activities**: Objective actions and outcomes
+```
+[Time] Action → Outcome (Context/Artifact)
+```
+
+**Notes**: Insights, decisions, reasoning with type tags
+```
+[Type]
+2-3 sentence note
 ```
 
 ## Files
@@ -322,8 +390,12 @@ obsidian/daily_journal/
   - Skill name and description
   - Allowed tools (write, read, exec, find_file_by_name, ask_user_question)
   - Triggers (model and user initiated)
-  - Detailed instructions for the entire workflow
-  - Example usage patterns
+  - Quick Reference for immediate decision support
+  - Core Principles (architecture, operating modes, context priority)
+  - Autonomous Logging Rules (ChatGPT.md framework with trigger conditions)
+  - User-Initiated Logging Procedures (Steps 1-7 with detailed natural language parsing)
+  - Script Reference
+  - Example Workflows
 
 - **config.sh**: Skill-specific configuration file:
   - Vault path and journal folder settings
@@ -345,7 +417,8 @@ obsidian/daily_journal/
 
 - **log_meeting.sh**: Meeting logging script:
   - Inserts meetings in chronological order
-  - Handles meeting metadata (type, duration, project)
+  - Handles meeting metadata (type, duration with units, project)
+  - Automatically adds "minutes" to duration if no units provided
   - Manages time-based ordering
   - Accepts optional date/time parameters (captures current automatically if not provided)
 
@@ -384,7 +457,7 @@ Verify that the `DAILY_JOURNAL_TEMPLATE` file exists in your Templates folder as
 Make sure your time format matches the configured `TIME_FORMAT` (default: HH:MM in 24-hour format). The skill compares timestamps as strings for ordering.
 
 ### "Context not being reused"
-The skill uses a priority system for context: remembered choices → existing journal entry. If context isn't being reused as expected, check that the journal entry has the expected context.
+The skill uses a priority system for context: request context → remembered choices. If context isn't being reused as expected, check that project/epic was either explicitly provided in the request or selected in the current session.
 
 ## License
 
