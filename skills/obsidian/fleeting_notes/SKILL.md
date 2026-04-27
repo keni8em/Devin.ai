@@ -254,7 +254,15 @@ When the skill needs to identify the active fleeting note at the start of a sess
 
 ## Stage 4: Request Completion
 
-When all actions are complete, provide a brief summary to the user of what has been done. Keep it concise — one line per action taken. Do not repeat content already confirmed during the interaction.
+When all actions are complete, provide a brief summary to the user of what has been done. Keep it concise — one line per action taken. Do not repeat content already confirmed during the interaction. The summary must include:
+
+- **Skill used**: fleeting_notes
+- **Invocation type**: user-directed or model-directed
+- **Autonomous logging applied**: None, Autonomous Capture, or Autonomous Lifecycle
+- **Smart Proofreading applied**: Yes or No
+
+Example summary format:
+"Captured content to fleeting note (user-directed, no autonomous logging, Smart Proofreading applied)."
 
 ---
 

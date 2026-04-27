@@ -326,7 +326,15 @@ When the user requests to log a note:
 
 ## Stage 4: Request Completion
 
-When all actions are complete, provide a summary to the user of what has been done.
+When all actions are complete, provide a summary to the user of what has been done. The summary must include:
+
+- **Skill used**: daily_journal
+- **Invocation type**: user-directed or model-directed
+- **Autonomous logging applied**: None, Intuitive Reasoning, or Session Progression Awareness
+- **Smart Proofreading applied**: Yes or No
+
+Example summary format:
+"Logged activity to daily journal (user-directed, no autonomous logging, Smart Proofreading applied)."
 
 ## Examples
 

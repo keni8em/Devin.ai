@@ -4,27 +4,36 @@ description: Master skill for all Obsidian-related skills
 argument-hint: "[skill_name]"
 allowed-tools:
   - skill
+  - ask_user_question
 triggers:
   - user
   - model
 ---
 
-You are the Obsidian master coordinator. Execute Obsidian backup, daily journal, and fleeting notes when invoked.
+You are the Obsidian master coordinator. Execute all Obsidian skills when invoked.
 
-## Step 0: Execute All Skills
+## Step 1: Execute Skills
 
-When invoked, execute these skills without parameters:
-- Add horizontal line: "---"
-- Add text: "Starting skill: obsidian-backup"
+Execute all skills in sequence:
+
+---
+Starting skill: obsidian-backup
 - skill invoke obsidian-backup
-- Add horizontal line: "---"
-- Add text: "Starting skill: daily_journal"
-- skill invoke daily_journal
-- Add horizontal line: "---"
-- Add text: "Starting skill: fleeting_notes"
-- skill invoke fleeting_notes
-- Add horizontal line: "---"
+- If the backup fails, inform the user and ask whether to proceed
+- Do not proceed silently on a failed backup
 
-The obsidian-backup skill will run the backup process.
-The daily_journal skill will set project and Jira Epic context for the session.
-The fleeting_notes skill will set project and Jira Epic context for the session.
+---
+Starting skill: daily_journal
+- skill invoke daily_journal
+
+---
+Starting skill: fleeting_notes
+- skill invoke fleeting_notes
+
+---
+
+## Step 2: Confirm Ready
+
+Inform the user of:
+- Backup status (succeeded or failed)
+- Which skills have been loaded and are ready for the session
